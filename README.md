@@ -24,10 +24,16 @@ The repository is organized as follows:
 
 project-name/
 ├── data/
+│   ├── file1.csv
+│   ├── file2.csv
+│   └── file3.csv
 ├── src/
-│ ├── main.py
-│ └── utils.py
+│   ├── main.py
+│   └── utils.py
 ├── output/
+│   ├── results1.csv
+│   ├── results2.csv
+│   └── results3.csv
 ├── README.md
 ├── requirements.txt
 └── LICENSE
