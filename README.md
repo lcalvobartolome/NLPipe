@@ -22,6 +22,7 @@ To use this project, follow these steps:
 
 The repository is organized as follows:
 
+```bash
 project-name/
 ├── data/
 │   ├── file1.csv
@@ -37,6 +38,7 @@ project-name/
 ├── README.md
 ├── requirements.txt
 └── LICENSE
+```
 
 ## License
 
