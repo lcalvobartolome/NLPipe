@@ -1,0 +1,17 @@
+dask==2022.7.0
+ipdb==0.13.9
+ipython==8.0.1
+ipywidgets==7.6.5
+langdetect==1.0.9
+numpy==1.22.4
+pandas==1.4.1
+pyarrow==8.0.0
+pynvml==11.4.1
+pyspark==3.3.0
+regex==2021.11.2
+tqdm==4.62.3
+contractions~=0.1.73
+spacy~=3.4.4
+gensim==4.3.0
+nltk==3.8.1
+openpyxl==3.1.1

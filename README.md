@@ -9,35 +9,56 @@ To install this project, follow these steps:
 2. Navigate to the project directory.
 3. Create and activate a virtual environment.
 4. Install the required dependencies using `pip install -r requirements.txt`.
+5. Install the spacy model to be used for the preprocessing using `!python3 -m spacy download spacy_model` where `spacy_model` is one of en_core_web_sm | en_core_web_md | en_core_web_lg
+
+   In general, if you have enough computational resources and need advanced text processing capabilities, en_core_web_lg is the best choice. However, if you have limited resources or need to process text quickly, en_core_web_sm might be a better option. en_core_web_md provides a balance between the two.
 
 ## Usage
-
 To use this project, follow these steps:
 
-1. Run the main script using `python main.py`.
-2. Specify the input data and parameters as required.
-3. View the results in the output directory.
+1. Add your dataset's information about the ID, title and abstract names in the `config.json`, as follows:
+   ```
+    "my_dataset": {
+    "id": "id_field_name",
+    "raw_text": "raw_text_field_name",
+    "title": "title_field_name"
+    }
+    ```
+2. Run the main script using the following command:
+    ```
+    python nlpipe.py [--source_path SOURCE_PATH] [--source_type SOURCE_TYPE] [--source SOURCE] [--destination_path DESTINATION_PATH] [--stw_path STW_PATH] [--nw NW]
+    ```
+    where 
+    `--source_path`: The path to the file containing the source data.
+    `--source_type`: The type of file storing the data to preprocess. The default value is parquet.
+    `--source`: The name of the dataset to be preprocessed (e.g., cordis, scholar, etc.).
+    `--destination_path`: The path to save the new preprocessed files. The default value is /workspaces/NLPipe/data.
+    `--stw_path`: The path to the folder where the stopwords are saved. The default value is data/stw_lists.
+    `--nw`: The number of workers to use with Dask. The default value is 0.
 
 ## Directory Structure
 
 The repository is organized as follows:
 
 ```bash
-project-name/
+NLPipe/
 ├── data/
-│   ├── file1.csv
-│   ├── file2.csv
-│   └── file3.csv
+│   ├── stw_lists/
+│   │   ├── stopwords_atire_ncbi.txt
+│   │   ├── stopwords_ebscohost_medline_cinahl.txt
+│   │   ├── stopwords_ovid.txt   
+│   │   └── stopwords_pubmed.txt
 ├── src/
-│   ├── main.py
+│   ├── acronyms.py
+│   ├── pipe.py
 │   └── utils.py
-├── output/
-│   ├── results1.csv
-│   ├── results2.csv
-│   └── results3.csv
+├── .devcontainer/
+│   ├── devcontainer.json
+├── nlpipe.py
 ├── README.md
 ├── requirements.txt
-└── LICENSE
+├── LICENSE
+└── Dockerfile
 ```
 
 ## License
