@@ -17,14 +17,14 @@ def main():
     # Read input arguments
     parser = argparse.ArgumentParser(
         description="NLPipe")
-    parser.add_argument("--source_path", type=str, default="/workspaces/NLPipe/data/projects.xlsx",
-                        required=False, help="Path to file with source file/s")
+    parser.add_argument("--source_path", type=str, default=None,
+                        required=True, help="Path to file with source file/s.")
     parser.add_argument("--source_type", type=str, default='parquet',
-                        required=False, help="Type of file storing the data to preprocess.")
-    parser.add_argument("--source", type=str, default='cordis',
-                        required=False, help="Name of the dataset to be preprocessed (e.g., cordis, scholar, etc.)")
-    parser.add_argument("--destination_path", type=str, default="/workspaces/NLPipe/data",
-                        required=False, help="Path to save the new preprocessed files")
+                        required=False, help="Source file's format.")
+    parser.add_argument("--source", type=str, default=None,
+                        required=True, help="Name of the dataset to be preprocessed (e.g., cordis, scholar, etc.)")
+    parser.add_argument("--destination_path", type=str, default=None,
+                        required=True, help="Path to save the new preprocessed files")
     parser.add_argument("--stw_path", type=str, default="data/stw_lists",
                         required=False, help="Path to the stopwords are saved")
     parser.add_argument("--nw", type=int, default=0,
@@ -66,7 +66,7 @@ def main():
         logger.error(f"Unknown source: {args.source}")
             
     readers = {
-        "xlsx": lambda path: dd.from_pandas(pd.read_excel(path), npartitions=3),
+        "xlsx": lambda path: dd.from_pandas(pd.read_excel(path), npartitions=3).fillna(""),
         "parquet": lambda path: dd.read_parquet(path).fillna("")
     }
 
@@ -91,7 +91,7 @@ def main():
         corpus_df[[title_fld, raw_text_fld]].apply(
             " ".join, axis=1, meta=('raw_text', 'object'))
     # Filter out rows with no raw_text
-    #corpus_df = corpus_df.dropna(subset=["raw_text"], how="any")
+    corpus_df = corpus_df.dropna(subset=["raw_text"], how="any")
     
     logger.info(f'-- -- NLP preprocessing starts...')
 

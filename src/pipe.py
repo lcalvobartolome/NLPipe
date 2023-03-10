@@ -194,6 +194,9 @@ class Pipe():
         self._logger.info(
             "-- Saving n-grams in new column in the dataFrame")
         
-        corpus_df["lemmas_with_grams"] =  corpus_df.apply(lambda row: corpus[row.name], meta=('lemmas_with_grams', 'object'), axis=1)
+        def get_ngram(row):
+            return corpus.pop(0)
+        corpus_df["lemmas_with_grams"] =  corpus_df.apply(get_ngram, meta=('lemmas_with_grams', 'object'), axis=1)
+        #corpus_df["lemmas_with_grams"] =  corpus_df.apply(lambda row: corpus[row.name], meta=('lemmas_with_grams', 'object'), axis=1)
         
         return corpus_df

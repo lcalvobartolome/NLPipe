@@ -17,24 +17,26 @@ To install this project, follow these steps:
 To use this project, follow these steps:
 
 1. Add your dataset's information about the ID, title and abstract names in the `config.json`, as follows:
+
    ```
     "my_dataset": {
-    "id": "id_field_name",
-    "raw_text": "raw_text_field_name",
-    "title": "title_field_name"
+        "id": "id_field_name",
+        "raw_text": "raw_text_field_name",
+        "title": "title_field_name"
     }
     ```
 2. Run the main script using the following command:
+
     ```
     python nlpipe.py [--source_path SOURCE_PATH] [--source_type SOURCE_TYPE] [--source SOURCE] [--destination_path DESTINATION_PATH] [--stw_path STW_PATH] [--nw NW]
     ```
     where 
-    `--source_path`: The path to the file containing the source data.
-    `--source_type`: The type of file storing the data to preprocess. The default value is parquet.
-    `--source`: The name of the dataset to be preprocessed (e.g., cordis, scholar, etc.).
-    `--destination_path`: The path to save the new preprocessed files. The default value is /workspaces/NLPipe/data.
-    `--stw_path`: The path to the folder where the stopwords are saved. The default value is data/stw_lists.
-    `--nw`: The number of workers to use with Dask. The default value is 0.
+    * `--source_path`: The path to the file containing the source data.
+    * `--source_type`: The type of file storing the data to preprocess. The default value is parquet.
+    * `--source`: The name of the dataset to be preprocessed (e.g., cordis, scholar, etc.).
+    * `--destination_path`: The path to save the new preprocessed files. The default value is /workspaces/NLPipe/data.
+    * `--stw_path`: The path to the folder where the stopwords are saved. The default value is data/stw_lists.
+    *`--nw`: The number of workers to use with Dask. The default value is 0.
 
 ## Directory Structure
 
