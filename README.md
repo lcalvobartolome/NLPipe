@@ -9,7 +9,7 @@ To install this project, follow these steps:
 2. Navigate to the project directory.
 3. Create and activate a virtual environment.
 4. Install the required dependencies using `pip install -r requirements.txt`.
-5. Install the spacy model to be used for the preprocessing using `!python3 -m spacy download spacy_model` where `spacy_model` is one of en_core_web_sm | en_core_web_md | en_core_web_lg
+5. Install the spacy model to be used for the preprocessing via `!python3 -m spacy download spacy_model` where `spacy_model` is one of en_core_web_sm | en_core_web_md | en_core_web_lg
 
    In general, if you have enough computational resources and need advanced text processing capabilities, en_core_web_lg is the best choice. However, if you have limited resources or need to process text quickly, en_core_web_sm might be a better option. en_core_web_md provides a balance between the two.
 
