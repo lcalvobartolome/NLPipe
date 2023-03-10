@@ -33,8 +33,8 @@ To use this project, follow these steps:
     * `--source_path` is the path to the source data.
     * `--source_type` is the file format of the source data. The default value is parquet.
     * `--source` is the name of the dataset to be preprocessed (e.g., cordis, scholar, etc.).
-    * `--destination_path` is the path to save the new preprocessed data.
-    * `--stw_path` is the path to the folder where the stopwords are saved. The default value is `data/stw_lists`.
+    * `--destination_path` is the path to save the preprocessed data.
+    * `--stw_path` is the folder path for stopwords. The default value is `data/stw_lists`.
     * `--nw` is the number of workers to use with Dask. The default value is 0.
 
 ## Directory Structure
