@@ -10,12 +10,12 @@ To install this project, follow these steps:
 3. Create and activate a virtual environment.
 4. Install the required dependencies using `pip install -r requirements.txt`.
 5. Install the spacy model to be used for the preprocessing via `!python3 -m spacy download spacy_model` where `spacy_model` is one of `en_core_web_sm` | `en_core_web_md` | `en_core_web_lg`. 
-In general, if you have enough computational resources and need advanced text processing capabilities, `en_core_web_lg` is the best choice. However, if you have limited resources or need to process text quickly, `en_core_web_sm` might be a better option. en_core_web_md provides a balance between the two.
+In general, if you have enough computational resources and need advanced text processing capabilities, `en_core_web_lg` is the best choice. However, if you have limited resources or need to process text quickly, `en_core_web_sm` might be a better option. `en_core_web_md` provides a balance between the two.
 
 ## Usage
 To use this project, follow these steps:
 
-1. Add your dataset's information about the ID, title and abstract names in the `config.json`, as follows:
+1. Add your dataset's information about the ID, raw text and title names in the `config.json`, as follows:
 
    ```
     "my_dataset": {
