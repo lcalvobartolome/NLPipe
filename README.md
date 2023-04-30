@@ -30,7 +30,7 @@ To use this project, follow these steps:
 2. Run the main script using the following command:
 
     ```bash
-    python nlpipe.py [--source_path SOURCE_PATH] [--source_type SOURCE_TYPE] [--source SOURCE] [--destination_path DESTINATION_PATH] [--stw_path STW_PATH] [--nw NW]
+    python nlpipe.py [--source_path SOURCE_PATH] [--source_type SOURCE_TYPE] [--source SOURCE] [--destination_path DESTINATION_PATH] [--stw_path STW_PATH] [--nw NW] [--lang LANG] [--spacy_model SPACY_MODEL]
     ```
 
     where:
