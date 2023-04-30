@@ -1,5 +1,8 @@
 # NLPipe
-This GitHub repository hosts an NLP pipeline based on Spacy and Gensim for topic modeling preprocessing, utilizing Dask for distributed computing. The repository contains the necessary code and files for the pipeline implementation.
+
+[![PyPI - License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Nemesis1303/NLPipe/blob/main/LICENSE)
+
+This GitHub repository hosts an NLP pipeline based on Spacy and Gensim for topic modeling preprocessing in English and Spanish, utilizing Dask for distributed computing. The repository contains the necessary code and files for the pipeline implementation.
 
 ## Installation
 
@@ -9,33 +12,41 @@ To install this project, follow these steps:
 2. Navigate to the project directory.
 3. Create and activate a virtual environment.
 4. Install the required dependencies using `pip install -r requirements.txt`.
-5. Install the spacy model to be used for the preprocessing via `!python3 -m spacy download spacy_model` where `spacy_model` is one of `en_core_web_sm` | `en_core_web_md` | `en_core_web_lg`. 
-In general, if you have enough computational resources and need advanced text processing capabilities, `en_core_web_lg` is the best choice. However, if you have limited resources or need to process text quickly, `en_core_web_sm` might be a better option. `en_core_web_md` provides a balance between the two.
 
 ## Usage
+
 To use this project, follow these steps:
 
 1. Add your dataset's information about the ID, raw text and title names in the `config.json`, as follows:
 
-   ```
+   ```json
     "my_dataset": {
         "id": "id_field_name",
         "raw_text": "raw_text_field_name",
         "title": "title_field_name"
     }
     ```
+
 2. Run the main script using the following command:
 
-    ```
+    ```bash
     python nlpipe.py [--source_path SOURCE_PATH] [--source_type SOURCE_TYPE] [--source SOURCE] [--destination_path DESTINATION_PATH] [--stw_path STW_PATH] [--nw NW]
     ```
-    where 
+
+    where:
     * `--source_path` is the path to the source data.
     * `--source_type` is the file format of the source data. The default value is parquet.
     * `--source` is the name of the dataset to be preprocessed (e.g., cordis, scholar, etc.).
     * `--destination_path` is the path to save the preprocessed data.
-    * `--stw_path` is the folder path for stopwords. The default value is `data/stw_lists`.
-    * `--nw` is the number of workers to use with Dask. The default value is 0.
+    * `--stw_path` is the folder path for stopwords. The default value is `data/stw_lists`. There you can find specific stopword lists in the languages supported by the tool.
+    * `--nw` is the number of workers to use with Dask. The default value is `0`.
+    * `--lang` is the language of the text to be preprocessed. At the time being, only English (`en`) and Spanish (`es`) are supported. The default value is `en`.
+    * `--spacy_model`is the Spacy model to be used for the preprocessing. The default value is `"en_core_web_md"`.
+
+> *Note that you need to choose the Spacy model according to the language of the text to be preprocessed. For example, if the text is in `English`, you can choose one out of `en_core_web_sm` | `en_core_web_md` | `en_core_web_lg` | `en_core_web_trf`. In case the language of the text is Spanish, the following are available: `es_core_news_sm` | `es_core_news_md` | `es_core_news_lg` | `es_core_news_trf`. In general, if you have enough computational resources and need advanced text processing capabilities, `xx_core_xx_lg` or `xx_core_xx_trf` are the best choices. However, if you have limited resources or need to process text quickly, `xx_core_xx_sm` might be a better option. `xx_core_xx_md` provides a balance between the latter options.*
+>> **If you are using transformer models, you still need to install spacy-transformers yourself!**
+
+
 
 ## Directory Structure
 
@@ -45,10 +56,15 @@ The repository is organized as follows:
 NLPipe/
 ├── data/
 │   ├── stw_lists/
-│   │   ├── stopwords_atire_ncbi.txt
-│   │   ├── stopwords_ebscohost_medline_cinahl.txt
-│   │   ├── stopwords_ovid.txt   
-│   │   └── stopwords_pubmed.txt
+│   │   ├── en/
+│   │   │   ├── stopwords_atire_ncbi.txt
+│   │   │   ├── stopwords_ebscohost_medline_cinahl.txt
+│   │   │   ├── stopwords_ovid.txt
+│   │   │   ├── stopwords_pubmed.txt
+│   │   ├── es/
+│   │   │   ├── stw_academic.txt   
+│   │   │   ├── stw_generic.txt
+│   │   │   └── stw_science.txt
 ├── src/
 │   ├── acronyms.py
 │   ├── pipe.py

@@ -1,18 +1,6 @@
-import nltk
+import dask.dataframe as dd
+from dask.diagnostics import ProgressBar
 from langdetect import detect
-
-
-def check_nltk_packages():
-    """
-    Checks that the necessary packages for NLTK preprocessing are installed
-    """
-    packages = ['punkt', 'stopwords', 'omw-1.4', 'wordnet']
-
-    for package in packages:
-        try:
-            nltk.data.find('tokenizers/' + package)
-        except LookupError:
-            nltk.download(package)
 
 
 def det(x: str) -> str:
@@ -24,3 +12,11 @@ def det(x: str) -> str:
     except:
         lang = 'Other'
     return lang
+
+
+def max_column_length(df: dd.DataFrame, col_name: str) -> int:
+    """Returns the maximum length of values in a Dask DataFrame column."""
+    lengths = df[col_name].str.len()
+    with ProgressBar():
+        max_length = lengths.max().compute(scheduler='processes')
+    return max_length

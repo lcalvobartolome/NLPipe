@@ -128,6 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-data/CORDIS.parquet
-data/preproc_cordis.parquet
-data/projects.xlsx
+data/source
+data/output

@@ -1,17 +1,16 @@
-
-import pathlib
-from typing import List
-import pandas as pd
-import re
-import pandas as pd
-import contractions
-import spacy
-from gensim.models.phrases import Phrases
-import dask.dataframe as dd
-from dask.diagnostics import ProgressBar
-from src.acronyms import acronyms_list
-
 import logging
+import pathlib
+import re
+from typing import List
+from spacy_download import load_spacy
+
+import contractions
+import dask.dataframe as dd
+import pandas as pd
+from dask.diagnostics import ProgressBar
+from gensim.models.phrases import Phrases
+
+import src.acronyms as acronyms
 
 
 class Pipe():
@@ -25,6 +24,9 @@ class Pipe():
 
     def __init__(self,
                  stw_files: List[pathlib.Path],
+                 spaCy_model: str,
+                 language: str,
+                 max_length: int,
                  logger=None):
         """
         Initilization Method
@@ -34,23 +36,34 @@ class Pipe():
         ----------
         stw_files: list of str
             List of paths to stopwords files
+        spaCy_model: str
+            Name of the spaCy model to be used for preprocessing
+        language: str
+            Language of the text to be preprocessed (en/es)
+        max_length: int
+            Maximum length of the text to be processed
         logger: Logger object
             To log object activity
         """
 
+        # Create logger object
         if logger:
             self._logger = logger
         else:
             logging.basicConfig(level='INFO')
             self._logger = logging.getLogger('nlpPipeline')
 
+        # Load stopwords and acronyms
         self._loadSTW(stw_files)
-        self._loadACR()
-        self._nlp = spacy.load('en_core_web_sm', exclude=['parser', 'ner'])
+        self._loadACR(language)
+
+        # Download spaCy model if not already downloaded and load
+        self._nlp = load_spacy(spaCy_model, exclude=['parser', 'ner'])
+        self._nlp.max_length = max_length + round(0.1 * max_length)
 
         return
 
-    def _loadSTW(self, stw_files: List[pathlib.Path]):
+    def _loadSTW(self, stw_files: List[pathlib.Path]) -> None:
         """
         Loads stopwords as list from files provided in the argument
 
@@ -71,12 +84,12 @@ class Pipe():
 
         return
 
-    def _loadACR(self):
+    def _loadACR(self, lang: str) -> None:
         """
         Loads list of acronyms
         """
 
-        self._acr_list = acronyms_list
+        self._acr_list = acronyms.en_acronyms_list if lang == 'en' else acronyms.es_acronyms_list
 
         return
 
@@ -98,7 +111,7 @@ class Pipe():
         """
 
         for (raw, rep) in patterns:
-            regex = re.compile(raw)
+            regex = re.compile(raw, flags=re.IGNORECASE)
             text = regex.sub(rep, text)
         return text
 

@@ -9,5 +9,10 @@
         "id": "id",
         "raw_text": "paperAbstract",
         "title": "title"
+    },
+    "unis": {
+        "id": "iden",
+        "raw_text": "Texto",
+        "title": "Nombre"
     }
 }
