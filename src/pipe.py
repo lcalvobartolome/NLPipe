@@ -26,7 +26,6 @@ class Pipe():
                  stw_files: List[pathlib.Path],
                  spaCy_model: str,
                  language: str,
-                 max_length: int,
                  logger=None):
         """
         Initilization Method
@@ -40,8 +39,6 @@ class Pipe():
             Name of the spaCy model to be used for preprocessing
         language: str
             Language of the text to be preprocessed (en/es)
-        max_length: int
-            Maximum length of the text to be processed
         logger: Logger object
             To log object activity
         """
@@ -59,8 +56,7 @@ class Pipe():
 
         # Download spaCy model if not already downloaded and load
         self._nlp = load_spacy(spaCy_model, exclude=['parser', 'ner'])
-        self._nlp.max_length = max_length + round(0.1 * max_length)
-
+        
         return
 
     def _loadSTW(self, stw_files: List[pathlib.Path]) -> None:
@@ -161,7 +157,7 @@ class Pipe():
 
         return final_tokenized
 
-    def preproc(self, corpus_df: dd.DataFrame) -> dd.DataFrame:
+    def preproc(self, corpus_df: dd.DataFrame, nw=0, no_ngrams=False) -> dd.DataFrame:
         """
         Invokes NLP pipeline and carries out, in addition, n-gram detection.
 
@@ -171,6 +167,10 @@ class Pipe():
             Dataframe representation of the corpus to be preprocessed. 
             It needs to contain (at least) the following columns:
             - raw_text
+        nw: int
+            Number of workers for Dask computations
+        no_grams: Bool
+            If True, calculation of ngrams will be skipped
 
         Returns
         -------
@@ -178,42 +178,55 @@ class Pipe():
             Preprocessed DataFrame
             It needs to contain (at least) the following columns:
             - raw_text
-            - lemmas_with_grams
+            - lemmas
         """
 
         # Lemmatize text
         self._logger.info("-- Lemmatizing text")
-        lemmas = corpus_df["raw_text"].apply(self.do_pipeline,
+        corpus_df["lemmas"] = corpus_df["raw_text"].apply(self.do_pipeline,
                                              meta=('lemmas', 'object'))
+
         # this does the same but with batch preprocessing
         # def apply_pipeline_to_partition(partition):
         #    return partition['raw_text'].apply(self.do_pipeline)
         # lemmas = corpus_df.map_partitions(apply_pipeline_to_partition, meta=('lemmas', 'object'))
 
-        # Create corpus from tokenized lemmas
-        self._logger.info(
-            "-- Creating corpus from lemmas for n-grams detection")
-        with ProgressBar():
-            lemmas = lemmas.compute(scheduler='processes')
-        corpus = lemmas.values.tolist()
+        if not no_ngrams:
+            # Create corpus from tokenized lemmas
+            self._logger.info(
+                "-- Creating corpus from lemmas for n-grams detection")
+            with ProgressBar():
+                lemmas = corpus_df["lemmas"].compute(scheduler='processes', num_workers=nw)
+            
+            # Create Phrase model for n-grams detection
+            self._logger.info("-- Creating Phrase model")
+            phrase_model = Phrases(lemmas, min_count=2, threshold=20)
 
-        # Create Phrase model for n-grams detection
-        self._logger.info("-- Creating Phrase model")
-        phrase_model = Phrases(corpus, min_count=2, threshold=20)
+            # Carry out n-grams substitution
+            self._logger.info("-- Carrying out n-grams substitution")
+            def get_ngram(doc):
+                return " ".join(phrase_model[doc])
+            
+            corpus_df["lemmas"] = corpus_df["lemmas"].apply(get_ngram,
+                                                meta=('lemmas', 'str'))
 
-        # Carry out n-grams substitution
-        self._logger.info("-- Carrying out n-grams substitution")
-        corpus = (phrase_model[doc] for doc in corpus)
-        corpus = list((" ".join(doc) for doc in corpus))
+            """
+            corpus = (phrase_model[doc] for doc in corpus)
+            corpus = list((" ".join(doc) for doc in corpus))
 
-        # Save n-grams in new column in the dataFrame
-        self._logger.info(
-            "-- Saving n-grams in new column in the dataFrame")
+            # Save n-grams in new column in the dataFrame
+            self._logger.info(
+                "-- Saving n-grams in new column in the dataFrame")
 
-        def get_ngram(row):
-            return corpus.pop(0)
-        corpus_df["lemmas_with_grams"] = corpus_df.apply(
-            get_ngram, meta=('lemmas_with_grams', 'object'), axis=1)
-        # corpus_df["lemmas_with_grams"] =  corpus_df.apply(lambda row: corpus[row.name], meta=('lemmas_with_grams', 'object'), axis=1)
+            def get_ngram(row):
+                return corpus.pop(0)
+            corpus_df["lemmas_with_grams"] = corpus_df.apply(
+                get_ngram, meta=('lemmas_with_grams', 'object'), axis=1)
+            # corpus_df["lemmas_with_grams"] =  corpus_df.apply(lambda row: corpus[row.name], meta=('lemmas_with_grams', 'object'), axis=1)
+            """
 
+        else:
+            corpus_df["lemmas"] = corpus_df["lemmas"].apply(lambda x: " ".join(x),
+                                                meta=('lemmas', 'str'))
+        
         return corpus_df

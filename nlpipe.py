@@ -41,6 +41,7 @@ def main():
                         required=False, help="Language of the text to be preprocessed (en/es)")
     parser.add_argument("--spacy_model", type=str, default="en_core_web_sm",
                         required=False, help="Spacy model to be used for preprocessing")
+    parser.add_argument('--no-ngrams', default=False, action='store_true')
 
     args = parser.parse_args()
 
@@ -98,19 +99,16 @@ def main():
     corpus_df = \
         corpus_df[corpus_df[raw_text_fld].apply(
             det,
-            meta=('langue', 'object')) == args.lang]
+            meta=('langue', 'str')) == args.lang]
 
     # Concatenate title + abstract/summary
     corpus_df["raw_text"] = \
         corpus_df[[title_fld, raw_text_fld]].apply(
-            " ".join, axis=1, meta=('raw_text', 'object'))
+            " ".join, axis=1, meta=('raw_text', 'str'))
+
     # Filter out rows with no raw_text
     corpus_df = corpus_df.replace("nan", np.nan)  
     corpus_df = corpus_df.dropna(subset=["raw_text"], how="any")
-
-    logger.info(f"-- Checking max length of column 'raw_text'...")
-    max_len = max_column_length(corpus_df, 'raw_text')
-    logger.info(f"-- Max length of column 'raw_text' is {max_len}.")
 
     # Get stopword lists
     stw_lsts = []
@@ -123,18 +121,18 @@ def main():
     nlpPipeline = Pipe(stw_files=stw_lsts,
                        spaCy_model=args.spacy_model,
                        language=args.lang,
-                       max_length=max_len,
                        logger=logger)
 
     logger.info(f'-- -- NLP preprocessing starts...')
 
     start_time = time.time()
-    corpus_df = nlpPipeline.preproc(corpus_df)
+    corpus_df = nlpPipeline.preproc(corpus_df, args.nw, args.no_ngrams)
     logger.info(
         f'-- -- NLP preprocessing finished in {(time.time() - start_time)}')
 
     # Save new df in parquet file
-    outFile = destination_path.joinpath("preproc_" + args.source + ".parquet")
+    # outFile = destination_path.joinpath("preproc_" + args.source + ".parquet")
+    outFile = destination_path
     if outFile.is_file():
         outFile.unlink()
     elif outFile.is_dir():
