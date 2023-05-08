@@ -2,13 +2,13 @@ import logging
 import pathlib
 import re
 from typing import List
-from spacy_download import load_spacy
 
 import contractions
 import dask.dataframe as dd
 import pandas as pd
 from dask.diagnostics import ProgressBar
 from gensim.models.phrases import Phrases
+from spacy_download import load_spacy
 
 import src.acronyms as acronyms
 
@@ -26,6 +26,7 @@ class Pipe():
                  stw_files: List[pathlib.Path],
                  spaCy_model: str,
                  language: str,
+                 max_length: int,
                  logger=None):
         """
         Initilization Method
@@ -39,6 +40,8 @@ class Pipe():
             Name of the spaCy model to be used for preprocessing
         language: str
             Language of the text to be preprocessed (en/es)
+        max_length: int
+            Maximum length of the text to be processed
         logger: Logger object
             To log object activity
         """
@@ -56,7 +59,8 @@ class Pipe():
 
         # Download spaCy model if not already downloaded and load
         self._nlp = load_spacy(spaCy_model, exclude=['parser', 'ner'])
-        
+        self._nlp.max_length = max_length + round(0.1 * max_length)
+
         return
 
     def _loadSTW(self, stw_files: List[pathlib.Path]) -> None:
@@ -184,7 +188,7 @@ class Pipe():
         # Lemmatize text
         self._logger.info("-- Lemmatizing text")
         corpus_df["lemmas"] = corpus_df["raw_text"].apply(self.do_pipeline,
-                                             meta=('lemmas', 'object'))
+                                                          meta=('lemmas', 'object'))
 
         # this does the same but with batch preprocessing
         # def apply_pipeline_to_partition(partition):
@@ -196,37 +200,31 @@ class Pipe():
             self._logger.info(
                 "-- Creating corpus from lemmas for n-grams detection")
             with ProgressBar():
-                lemmas = corpus_df["lemmas"].compute(scheduler='processes', num_workers=nw)
-            
+                if nw > 0:
+                    lemmas = corpus_df["lemmas"].compute(
+                        scheduler='processes', num_workers=nw)
+                else:
+                    # Use Dask default number of workers (i.e., number of cores)
+                    lemmas = corpus_df["lemmas"].compute(
+                        scheduler='processes')
+
             # Create Phrase model for n-grams detection
             self._logger.info("-- Creating Phrase model")
             phrase_model = Phrases(lemmas, min_count=2, threshold=20)
 
             # Carry out n-grams substitution
             self._logger.info("-- Carrying out n-grams substitution")
+
             def get_ngram(doc):
                 return " ".join(phrase_model[doc])
-            
-            corpus_df["lemmas"] = corpus_df["lemmas"].apply(get_ngram,
-                                                meta=('lemmas', 'str'))
 
-            """
-            corpus = (phrase_model[doc] for doc in corpus)
-            corpus = list((" ".join(doc) for doc in corpus))
-
-            # Save n-grams in new column in the dataFrame
-            self._logger.info(
-                "-- Saving n-grams in new column in the dataFrame")
-
-            def get_ngram(row):
-                return corpus.pop(0)
-            corpus_df["lemmas_with_grams"] = corpus_df.apply(
-                get_ngram, meta=('lemmas_with_grams', 'object'), axis=1)
-            # corpus_df["lemmas_with_grams"] =  corpus_df.apply(lambda row: corpus[row.name], meta=('lemmas_with_grams', 'object'), axis=1)
-            """
+            corpus_df["lemmas"] = \
+                corpus_df["lemmas"].apply(
+                    get_ngram, meta=('lemmas', 'str'))
 
         else:
-            corpus_df["lemmas"] = corpus_df["lemmas"].apply(lambda x: " ".join(x),
-                                                meta=('lemmas', 'str'))
-        
+            corpus_df["lemmas"] = \
+                corpus_df["lemmas"].apply(
+                    lambda x: " ".join(x), meta=('lemmas', 'str'))
+
         return corpus_df

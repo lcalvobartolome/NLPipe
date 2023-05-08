@@ -41,7 +41,8 @@ def main():
                         required=False, help="Language of the text to be preprocessed (en/es)")
     parser.add_argument("--spacy_model", type=str, default="en_core_web_sm",
                         required=False, help="Spacy model to be used for preprocessing")
-    parser.add_argument('--no-ngrams', default=False, action='store_true')
+    parser.add_argument('--no-ngrams', default=False, required=False,
+                        action='store_true', help="Flag to disable ngrams detection")
 
     args = parser.parse_args()
 
@@ -107,8 +108,13 @@ def main():
             " ".join, axis=1, meta=('raw_text', 'str'))
 
     # Filter out rows with no raw_text
-    corpus_df = corpus_df.replace("nan", np.nan)  
+    corpus_df = corpus_df.replace("nan", np.nan)
     corpus_df = corpus_df.dropna(subset=["raw_text"], how="any")
+
+    # Check max length of raw_text column to pass to the Pipe class
+    logger.info(f"-- Checking max length of column 'raw_text'...")
+    max_len = max_column_length(corpus_df, 'raw_text')
+    logger.info(f"-- Max length of column 'raw_text' is {max_len}.")
 
     # Get stopword lists
     stw_lsts = []
@@ -121,6 +127,7 @@ def main():
     nlpPipeline = Pipe(stw_files=stw_lsts,
                        spaCy_model=args.spacy_model,
                        language=args.lang,
+                       max_length=max_len,
                        logger=logger)
 
     logger.info(f'-- -- NLP preprocessing starts...')

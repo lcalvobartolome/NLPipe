@@ -30,7 +30,7 @@ To use this project, follow these steps:
 2. Run the main script using the following command:
 
     ```bash
-    python nlpipe.py [--source_path SOURCE_PATH] [--source_type SOURCE_TYPE] [--source SOURCE] [--destination_path DESTINATION_PATH] [--stw_path STW_PATH] [--nw NW] [--lang LANG] [--spacy_model SPACY_MODEL]
+    python nlpipe.py [--source_path SOURCE_PATH] [--source_type SOURCE_TYPE] [--source SOURCE] [--destination_path DESTINATION_PATH] [--stw_path STW_PATH] [--nw NW] [--lang LANG] [--spacy_model SPACY_MODEL] [--no-ngrams NO-NGRAMS]
     ```
 
     where:
@@ -42,11 +42,10 @@ To use this project, follow these steps:
     * `--nw` is the number of workers to use with Dask. The default value is `0`.
     * `--lang` is the language of the text to be preprocessed. At the time being, only English (`en`) and Spanish (`es`) are supported. The default value is `en`.
     * `--spacy_model`is the Spacy model to be used for the preprocessing. The default value is `"en_core_web_md"`.
+    * `--no-ngrams` is a flag to disable n-grams dectection.
 
 > *Note that you need to choose the Spacy model according to the language of the text to be preprocessed. For example, if the text is in `English`, you can choose one out of `en_core_web_sm` | `en_core_web_md` | `en_core_web_lg` | `en_core_web_trf`. In case the language of the text is Spanish, the following are available: `es_core_news_sm` | `es_core_news_md` | `es_core_news_lg` | `es_core_news_trf`. In general, if you have enough computational resources and need advanced text processing capabilities, `xx_core_xx_lg` or `xx_core_xx_trf` are the best choices. However, if you have limited resources or need to process text quickly, `xx_core_xx_sm` might be a better option. `xx_core_xx_md` provides a balance between the latter options.*
 >> **If you are using transformer models, you still need to install spacy-transformers yourself!**
-
-
 
 ## Directory Structure
 

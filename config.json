@@ -9,5 +9,10 @@
         "id": "corpusid",
         "raw_text": "abstract",
         "title": "title"
+    },
+    "unis": {
+        "id": "iden",
+        "raw_text": "Texto",
+        "title": "Nombre"
     }
 }
