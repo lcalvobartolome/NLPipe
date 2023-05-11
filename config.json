@@ -1,6 +1,6 @@
 {
     "cordis": {
-        "id": "projectID",
+        "id": "id",
         "raw_text": "objective",
         "title": "title",
         "//": "Depending on the source 'id' is 'projectID' and 'objective' is 'summary'"
@@ -9,6 +9,11 @@
         "id": "corpusid",
         "raw_text": "abstract",
         "title": "title"
+    },
+    "scholar-ai": {
+        "id": "id",
+        "raw_text": "text",
+        "title": ""
     },
     "unis": {
         "id": "iden",
