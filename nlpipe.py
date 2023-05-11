@@ -101,9 +101,6 @@ def main():
             f"-- Unsupported source type: {args.source_type}. Exiting...")
         sys.exit()
 
-    # Keep only necessary columns
-    corpus_df = df[[id_fld, raw_text_fld, title_fld]]
-
     # Detect abstracts' language and filter out those that are not in the language specified in args.lang
     logger.info(f"-- Detecting language...")
     corpus_df = \
@@ -116,11 +113,12 @@ def main():
         corpus_df["raw_text"] = \
             corpus_df[[title_fld, raw_text_fld]].apply(
                 " ".join, axis=1, meta=('raw_text', 'str'))
-        # Remove original abstract and title fields
-        corpus_df = corpus_df[[id_fld, 'raw_text']]
     else:
         # Rename text field to raw_text
         corpus_df = corpus_df.rename(columns={raw_text_fld: 'raw_text'})
+    
+    # Keep only necessary columns
+    corpus_df = df[[id_fld, 'raw_text']]
 
     # Filter out rows with no raw_text
     corpus_df = corpus_df.replace("nan", np.nan)

@@ -63,12 +63,15 @@ NLPipe/
 │   │   │   ├── stopwords_ebscohost_medline_cinahl.txt
 │   │   │   ├── stopwords_ovid.txt
 │   │   │   ├── stopwords_pubmed.txt
+│   │   │   ├── stopwords_technical.txt
+│   │   │   ├── stopwords_UPSTO.txt
 │   │   ├── es/
 │   │   │   ├── stw_academic.txt   
 │   │   │   ├── stw_generic.txt
 │   │   │   └── stw_science.txt
 ├── src/
 │   ├── acronyms.py
+│   ├── embeddings_manager.py
 │   ├── pipe.py
 │   └── utils.py
 ├── .devcontainer/
