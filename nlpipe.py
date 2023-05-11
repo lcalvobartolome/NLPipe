@@ -103,19 +103,19 @@ def main():
 
     # Detect abstracts' language and filter out those that are not in the language specified in args.lang
     logger.info(f"-- Detecting language...")
-    corpus_df = \
-        corpus_df[corpus_df[raw_text_fld].apply(
+    df = \
+        df[df[raw_text_fld].apply(
             det,
             meta=('langue', 'str')) == args.lang]
 
     # Concatenate title + abstract/summary if title is given
     if title_fld != "":
-        corpus_df["raw_text"] = \
-            corpus_df[[title_fld, raw_text_fld]].apply(
+        df["raw_text"] = \
+            df[[title_fld, raw_text_fld]].apply(
                 " ".join, axis=1, meta=('raw_text', 'str'))
     else:
         # Rename text field to raw_text
-        corpus_df = corpus_df.rename(columns={raw_text_fld: 'raw_text'})
+        df = df.rename(columns={raw_text_fld: 'raw_text'})
     
     # Keep only necessary columns
     corpus_df = df[[id_fld, 'raw_text']]
