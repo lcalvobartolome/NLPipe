@@ -44,6 +44,8 @@ def main():
                         required=False, help="Spacy model to be used for preprocessing")
     parser.add_argument('--no_ngrams', default=False, required=False,
                         action='store_true', help="Flag to disable ngrams detection")
+    parser.add_argument('--no_preproc', default=False, required=False,
+                        action='store_true', help="Flag to disable NLP preprocessing")
     parser.add_argument('--do_embeddings', default=False, required=False,
                         action='store_true', help="Flag to acticate embeddings calculation")
     parser.add_argument("--embeddings_model", type=str,
@@ -124,39 +126,40 @@ def main():
     corpus_df = corpus_df.replace("nan", np.nan)
     corpus_df = corpus_df.dropna(subset=["raw_text"], how="any")
 
-    # Check max length of raw_text column to pass to the Pipe class
-    logger.info(f"-- Checking max length of column 'raw_text'...")
-    max_len = max_column_length(corpus_df, 'raw_text')
-    logger.info(f"-- Max length of column 'raw_text' is {max_len}.")
+    if not args.no_preproc:
+        # Check max length of raw_text column to pass to the Pipe class
+        logger.info(f"-- Checking max length of column 'raw_text'...")
+        max_len = max_column_length(corpus_df, 'raw_text')
+        logger.info(f"-- Max length of column 'raw_text' is {max_len}.")
 
-    # Get stopword lists
-    stw_lsts = []
-    for entry in pathlib.Path(args.stw_path).joinpath(args.lang).iterdir():
-        # check if it is a file
-        if entry.as_posix().endswith("txt"):
-            stw_lsts.append(entry)
+        # Get stopword lists
+        stw_lsts = []
+        for entry in pathlib.Path(args.stw_path).joinpath(args.lang).iterdir():
+            # check if it is a file
+            if entry.as_posix().endswith("txt"):
+                stw_lsts.append(entry)
 
-    # Create pipeline
-    nlpPipeline = Pipe(stw_files=stw_lsts,
-                       spaCy_model=args.spacy_model,
-                       language=args.lang,
-                       max_length=max_len,
-                       logger=logger)
+        # Create pipeline
+        nlpPipeline = Pipe(stw_files=stw_lsts,
+                        spaCy_model=args.spacy_model,
+                        language=args.lang,
+                        max_length=max_len,
+                        logger=logger)
 
-    logger.info(f'-- -- NLP preprocessing starts...')
+        logger.info(f'-- -- NLP preprocessing starts...')
 
-    start_time = time.time()
-    corpus_df = nlpPipeline.preproc(corpus_df, args.nw, args.no_ngrams)
-    logger.info(
-        f'-- -- NLP preprocessing finished in {(time.time() - start_time)}')
-
-    # Calculate embeddings if flag is activated
-    if args.do_embeddings:
+        start_time = time.time()
+        corpus_df = nlpPipeline.preproc(corpus_df, args.nw, args.no_ngrams)
+        logger.info(
+            f'-- -- NLP preprocessing finished in {(time.time() - start_time)}')
         
         # Save new df in parquet file
         logger.info(
             f'-- -- Saving preprocessed data without embeddings in {destination_path.as_posix()}...')
         save_parquet(outFile=destination_path, df=corpus_df, nw=args.nw)
+
+    # Calculate embeddings if flag is activated
+    if args.do_embeddings:
         
         logger.info(f'-- -- Embeddings calculation starts...')
         start_time = time.time()
@@ -174,10 +177,10 @@ def main():
         else:
             destination_path = pathlib.Path(destination_path.as_posix()+"_embeddings")
 
-    # Save new df in parquet file
-    logger.info(
-        f'-- -- Saving final preprocessed data in {destination_path.as_posix()}...')
-    save_parquet(outFile=destination_path, df=corpus_df, nw=args.nw)
+        # Save new df in parquet file
+        logger.info(
+            f'-- -- Saving final preprocessed data in {destination_path.as_posix()}...')
+        save_parquet(outFile=destination_path, df=corpus_df, nw=args.nw)
 
     return
 

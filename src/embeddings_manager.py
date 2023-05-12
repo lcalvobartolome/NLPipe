@@ -208,12 +208,15 @@ class EmbeddingsManager(object):
         #        lambda x: len(x)).compute().to_numpy()
 
         # Build a Dask array with the same partition sizes
-        emdarray = da.from_array(embeddings) #, chunks=tuple(chunks)
+        #emdarray = da.from_array(embeddings) #, chunks=tuple(chunks)
+        index_col = corpus_df['id'].compute().to_frame()
+        index_col['embeddings'] = embeddings        
+        joined = dd.merge(corpus_df, index_col)
 
         # Assign the list of embeddings to the dataframe
-        corpus_df['embeddings'] = emdarray
+        #corpus_df['embeddings'] = emdarray
 
-        return corpus_df
+        return joined
 
 
 if __name__ == "__main__":
