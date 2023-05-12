@@ -201,16 +201,14 @@ class EmbeddingsManager(object):
         # Convert to string
         embeddings = [str(emb) for emb in embeddings]
 
-        def get_embeddings(doc):
-            return embeddings[doc]
-
         self._logger.info(f"-- -- Saving embeddings in dataframe...")
         # Work out the lengths of each partition
-        chunks = corpus_df.map_partitions(
-            lambda x: len(x)).compute().to_numpy()
+        #with ProgressBar():
+        #    chunks = corpus_df.map_partitions(
+        #        lambda x: len(x)).compute().to_numpy()
 
         # Build a Dask array with the same partition sizes
-        emdarray = da.from_array(embeddings, chunks=tuple(chunks))
+        emdarray = da.from_array(embeddings) #, chunks=tuple(chunks)
 
         # Assign the list of embeddings to the dataframe
         corpus_df['embeddings'] = emdarray
