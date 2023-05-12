@@ -172,7 +172,7 @@ def main():
             bare_name = destination_path.as_posix().split(".parquet")[0]
             destination_path = pathlib.Path(bare_name + "_embeddings.parquet")
         else:
-            destination_path = destination_path.joinpath("_embeddings")
+            destination_path = pathlib.Path(destination_path.as_posix()+"_embeddings")
 
     # Save new df in parquet file
     logger.info(
