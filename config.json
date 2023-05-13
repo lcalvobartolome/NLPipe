@@ -19,5 +19,10 @@
         "id": "iden",
         "raw_text": "Texto",
         "title": "Nombre"
+    },
+    "scopus": {
+        "id": "id",
+        "raw_text": "description",
+        "title": "title"
     }
 }

@@ -188,7 +188,7 @@ class Pipe():
         # Lemmatize text
         self._logger.info("-- Lemmatizing text")
         corpus_df["lemmas"] = corpus_df["raw_text"].apply(self.do_pipeline,
-                                                          meta=('lemmas', 'object'))
+                                                          meta=('lemmas', 'str'))
 
         # this does the same but with batch preprocessing
         # def apply_pipeline_to_partition(partition):

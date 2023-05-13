@@ -12,6 +12,8 @@ import pandas as pd
 from dask.diagnostics import ProgressBar
 from pyfiglet import figlet_format
 from termcolor import cprint
+import pyarrow.parquet as pq
+
 
 from src.embeddings_manager import EmbeddingsManager
 from src.pipe import Pipe
@@ -60,12 +62,14 @@ def main():
     # Create logger object
     logging.basicConfig(level='INFO')
     logger = logging.getLogger('nlpPipeline')
-
+    
+    # Check that the language is valid
     if args.lang not in ['en', 'es']:
         logger.error(
             f"-- The language {args.lang} is not supported by the tool. Exiting... ")
         sys.exit()
 
+    # Check that the source file exists
     if pathlib.Path(args.source_path).exists():
         source_path = pathlib.Path(args.source_path)
     else:
@@ -74,58 +78,99 @@ def main():
         sys.exit()
 
     destination_path = pathlib.Path(args.destination_path)
-
-    # Read config file to get the id, title and abstract fields associated with the dataset under preprocessing
-    with open('config.json') as f:
-        field_mappings = json.load(f)
-
-    if args.source in field_mappings:
-        mapping = field_mappings[args.source]
-        logger.info(f"Reading from {args.source}...")
-        id_fld = mapping["id"]
-        raw_text_fld = mapping["raw_text"]
-        title_fld = mapping["title"]
-    else:
-        logger.error(f"Unknown source: {args.source}. Exiting...")
-        sys.exit()
-
-    readers = {
-        "xlsx": lambda path: dd.from_pandas(pd.read_excel(path), npartitions=3).fillna(""),
-        "parquet": lambda path: dd.read_parquet(path).fillna("")
-    }
-
-    # Get reader according to file format
-    if args.source_type in readers:
-        reader = readers[args.source_type]
-        df = reader(source_path)
-    else:
-        logger.error(
-            f"-- Unsupported source type: {args.source_type}. Exiting...")
-        sys.exit()
-
-    # Detect abstracts' language and filter out those that are not in the language specified in args.lang
-    logger.info(f"-- Detecting language...")
-    df = \
-        df[df[raw_text_fld].apply(
-            det,
-            meta=('langue', 'str')) == args.lang]
-
-    # Concatenate title + abstract/summary if title is given
-    if title_fld != "":
-        df["raw_text"] = \
-            df[[title_fld, raw_text_fld]].apply(
-                " ".join, axis=1, meta=('raw_text', 'str'))
-    else:
-        # Rename text field to raw_text
-        df = df.rename(columns={raw_text_fld: 'raw_text'})
     
-    # Keep only necessary columns
-    corpus_df = df[[id_fld, 'raw_text']]
+    # If do_embeddings and no_preproc flags are activated, we check if there is already preprocessed data available in destination_path. If there is, we load such a dataframe; otherwise, we load the given by the source_path
+    from_preproc = False
+    if args.do_embeddings and args.no_preproc:
+        if destination_path.exists():
+            try:
+                if destination_path.is_file():
+                    res = destination_path
+                elif destination_path.is_dir():
+                    for entry in destination_path.iterdir():
+                        # check if it is a file
+                        if entry.as_posix().endswith("parquet"):
+                            res = entry
+                            break
+                
+                # Read the schema of the parquet file
+                schema = pq.read_schema(res)
+             
+                # Get the list of column names
+                column_names = schema.names
+                
+                logger.info(
+                    f"-- -- Available column names: {str(column_names)}")
+                
+                if 'lemmas' in column_names:
+                    from_preproc = True
+                    
+                    logger.info(
+                    f"Lemmas in {destination_path.as_posix()}. \
+                    Loading from there...")
+                    
+                    # Load df with lemmas
+                    corpus_df = dd.read_parquet(destination_path)
+                    
+            except:
+                logger.info(
+                    f"No available lemmas in {destination_path.as_posix()}. \
+                    Loading from {source_path.as_posix()}...")
+    
+    if not args.no_preproc or not from_preproc:
 
-    # Filter out rows with no raw_text
-    corpus_df = corpus_df.replace("nan", np.nan)
-    corpus_df = corpus_df.dropna(subset=["raw_text"], how="any")
+        # Read config file to get the id, title and abstract fields associated with the dataset under preprocessing
+        with open('config.json') as f:
+            field_mappings = json.load(f)
 
+        if args.source in field_mappings:
+            mapping = field_mappings[args.source]
+            logger.info(f"Reading from {args.source}...")
+            id_fld = mapping["id"]
+            raw_text_fld = mapping["raw_text"]
+            title_fld = mapping["title"]
+        else:
+            logger.error(f"Unknown source: {args.source}. Exiting...")
+            sys.exit()
+
+        readers = {
+            "xlsx": lambda path: dd.from_pandas(pd.read_excel(path), npartitions=3).fillna(""),
+            "parquet": lambda path: dd.read_parquet(path).fillna("")
+        }
+
+        # Get reader according to file format
+        if args.source_type in readers:
+            reader = readers[args.source_type]
+            df = reader(source_path)
+        else:
+            logger.error(
+                f"-- Unsupported source type: {args.source_type}. Exiting...")
+            sys.exit()
+
+        # Detect abstracts' language and filter out those that are not in the language specified in args.lang
+        logger.info(f"-- Detecting language...")
+        df = \
+            df[df[raw_text_fld].apply(
+                det,
+                meta=('langue', 'str')) == args.lang]
+
+        # Concatenate title + abstract/summary if title is given
+        if title_fld != "":
+            df["raw_text"] = \
+                df[[title_fld, raw_text_fld]].apply(
+                    " ".join, axis=1, meta=('raw_text', 'str'))
+        else:
+            # Rename text field to raw_text
+            df = df.rename(columns={raw_text_fld: 'raw_text'})
+        
+        # Keep only necessary columns
+        corpus_df = df[[id_fld, 'raw_text']]
+
+        # Filter out rows with no raw_text
+        corpus_df = corpus_df.replace("nan", np.nan)
+        corpus_df = corpus_df.dropna(subset=["raw_text"], how="any")
+    
+    # Carry out NLP preprocessing if flag is not deactivated
     if not args.no_preproc:
         # Check max length of raw_text column to pass to the Pipe class
         logger.info(f"-- Checking max length of column 'raw_text'...")
@@ -164,10 +209,19 @@ def main():
         logger.info(f'-- -- Embeddings calculation starts...')
         start_time = time.time()
         em = EmbeddingsManager(logger=logger)
-        corpus_df = em.generate_embeddings(corpus_df=corpus_df,
-                                           embeddings_model=args.embeddings_model,
-                                           max_seq_length=args.max_sequence_length,
-                                           nw=args.nw)
+        # corpus_df = em.generate_embeddings(corpus_df=corpus_df,
+        #                                    embeddings_model=args.embeddings_model,
+        #                                    max_seq_length=args.max_sequence_length,
+        #                                    nw=args.nw)
+        corpus_df = em.bert_embeddings_from_df(
+            df=corpus_df,
+            text_column='raw_text',
+            sbert_model_to_load=args.embeddings_model,
+            batch_size=32,
+            max_seq_length=args.max_sequence_length)
+        
+        import pdb; pdb.set_trace()
+        
         logger.info(
             f'-- -- Embeddings calculation finished in {(time.time() - start_time)}')
         

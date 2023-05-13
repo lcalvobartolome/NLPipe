@@ -93,6 +93,53 @@ class EmbeddingsManager(object):
             texts, show_progress_bar=True, batch_size=batch_size).tolist()
 
         return embeddings
+    
+    def bert_embeddings_from_df(self,
+                                df: dd.DataFrame,
+                                text_column: str,
+                                sbert_model_to_load: str,
+                                batch_size=32,
+                                max_seq_length=None):
+        """
+        Creates SBERT Embeddings for each row in a dask dataframe and saves the embeddings in a new column
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The dataframe containing the sentences to embed
+        text_column : str
+            The name of the column containing the text to embed
+        sbert_model_to_load : str
+            Model (e.g. paraphrase-distilroberta-base-v1) to be used for generating the embeddings
+        batch_size : int (default=32)
+            The batch size used for the computation
+        max_seq_length : int
+            Context of the transformer model used for the embeddings generation
+
+        Returns
+        -------
+        df: dd.DataFrame
+            The dataframe with the original data and the generated embeddings
+        """
+        
+        model = SentenceTransformer(sbert_model_to_load)
+
+        if max_seq_length is not None:
+            model.max_seq_length = max_seq_length
+
+        self._check_max_local_length(max_seq_length, df[text_column])
+
+        def encode_text(text):
+            embedding = model.encode(text,
+                                     show_progress_bar=True, batch_size=batch_size)
+            # Convert to string
+            embedding = str(embedding)
+            return embedding
+        
+        df["embeddings"] = df[text_column].apply(
+            encode_text, meta=('embeddings', 'str'))
+        
+        return df
 
     def add_embeddins_to_parquet(self,
                                  parquet_file: Path,
@@ -210,7 +257,8 @@ class EmbeddingsManager(object):
         # Build a Dask array with the same partition sizes
         #emdarray = da.from_array(embeddings) #, chunks=tuple(chunks)
         index_col = corpus_df['id'].compute().to_frame()
-        index_col['embeddings'] = embeddings        
+        index_col['embeddings'] = pd.Series(embeddings, index = index_col.index[:len(embeddings)]) 
+        import pdb; pdb.set_trace()
         joined = dd.merge(corpus_df, index_col)
 
         # Assign the list of embeddings to the dataframe
