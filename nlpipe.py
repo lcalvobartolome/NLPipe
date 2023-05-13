@@ -2,18 +2,15 @@ import argparse
 import json
 import logging
 import pathlib
-import shutil
 import sys
 import time
 
 import dask.dataframe as dd
 import numpy as np
 import pandas as pd
-from dask.diagnostics import ProgressBar
+import pyarrow.parquet as pq
 from pyfiglet import figlet_format
 from termcolor import cprint
-import pyarrow.parquet as pq
-
 
 from src.embeddings_manager import EmbeddingsManager
 from src.pipe import Pipe
@@ -62,7 +59,7 @@ def main():
     # Create logger object
     logging.basicConfig(level='INFO')
     logger = logging.getLogger('nlpPipeline')
-    
+
     # Check that the language is valid
     if args.lang not in ['en', 'es']:
         logger.error(
@@ -78,7 +75,7 @@ def main():
         sys.exit()
 
     destination_path = pathlib.Path(args.destination_path)
-    
+
     # If do_embeddings and no_preproc flags are activated, we check if there is already preprocessed data available in destination_path. If there is, we load such a dataframe; otherwise, we load the given by the source_path
     from_preproc = False
     if args.do_embeddings and args.no_preproc:
@@ -92,31 +89,31 @@ def main():
                         if entry.as_posix().endswith("parquet"):
                             res = entry
                             break
-                
+
                 # Read the schema of the parquet file
                 schema = pq.read_schema(res)
-             
+
                 # Get the list of column names
                 column_names = schema.names
-                
+
                 logger.info(
                     f"-- -- Available column names: {str(column_names)}")
-                
+
                 if 'lemmas' in column_names:
                     from_preproc = True
-                    
+
                     logger.info(
-                    f"Lemmas in {destination_path.as_posix()}. \
+                        f"Lemmas in {destination_path.as_posix()}. \
                     Loading from there...")
-                    
+
                     # Load df with lemmas
                     corpus_df = dd.read_parquet(destination_path)
-                    
+
             except:
                 logger.info(
                     f"No available lemmas in {destination_path.as_posix()}. \
                     Loading from {source_path.as_posix()}...")
-    
+
     if not args.no_preproc or not from_preproc:
 
         # Read config file to get the id, title and abstract fields associated with the dataset under preprocessing
@@ -162,14 +159,14 @@ def main():
         else:
             # Rename text field to raw_text
             df = df.rename(columns={raw_text_fld: 'raw_text'})
-        
+
         # Keep only necessary columns
         corpus_df = df[[id_fld, 'raw_text']]
 
         # Filter out rows with no raw_text
         corpus_df = corpus_df.replace("nan", np.nan)
         corpus_df = corpus_df.dropna(subset=["raw_text"], how="any")
-    
+
     # Carry out NLP preprocessing if flag is not deactivated
     if not args.no_preproc:
         # Check max length of raw_text column to pass to the Pipe class
@@ -186,10 +183,10 @@ def main():
 
         # Create pipeline
         nlpPipeline = Pipe(stw_files=stw_lsts,
-                        spaCy_model=args.spacy_model,
-                        language=args.lang,
-                        max_length=max_len,
-                        logger=logger)
+                           spaCy_model=args.spacy_model,
+                           language=args.lang,
+                           max_length=max_len,
+                           logger=logger)
 
         logger.info(f'-- -- NLP preprocessing starts...')
 
@@ -197,7 +194,7 @@ def main():
         corpus_df = nlpPipeline.preproc(corpus_df, args.nw, args.no_ngrams)
         logger.info(
             f'-- -- NLP preprocessing finished in {(time.time() - start_time)}')
-        
+
         # Save new df in parquet file
         logger.info(
             f'-- -- Saving preprocessed data without embeddings in {destination_path.as_posix()}...')
@@ -205,7 +202,7 @@ def main():
 
     # Calculate embeddings if flag is activated
     if args.do_embeddings:
-        
+
         logger.info(f'-- -- Embeddings calculation starts...')
         start_time = time.time()
         em = EmbeddingsManager(logger=logger)
@@ -219,17 +216,16 @@ def main():
             sbert_model_to_load=args.embeddings_model,
             batch_size=32,
             max_seq_length=args.max_sequence_length)
-        
-        import pdb; pdb.set_trace()
-        
+
         logger.info(
             f'-- -- Embeddings calculation finished in {(time.time() - start_time)}')
-        
+
         if destination_path.as_posix().endswith("parquet"):
             bare_name = destination_path.as_posix().split(".parquet")[0]
             destination_path = pathlib.Path(bare_name + "_embeddings.parquet")
         else:
-            destination_path = pathlib.Path(destination_path.as_posix()+"_embeddings")
+            destination_path = pathlib.Path(
+                destination_path.as_posix()+"_embeddings")
 
         # Save new df in parquet file
         logger.info(
