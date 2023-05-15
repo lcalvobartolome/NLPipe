@@ -133,7 +133,7 @@ class EmbeddingsManager(object):
             embedding = model.encode(text,
                                      show_progress_bar=True, batch_size=batch_size)
             # Convert to string
-            embedding = str(embedding)
+            embedding = ''.join(str(x) for x in embedding)
             return embedding
         
         df["embeddings"] = df[text_column].apply(

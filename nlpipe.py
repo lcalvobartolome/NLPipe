@@ -103,7 +103,7 @@ def main():
                     from_preproc = True
 
                     logger.info(
-                        f"Lemmas in {destination_path.as_posix()}. \
+                        f"-- -- Lemmas in {destination_path.as_posix()}. \
                     Loading from there...")
 
                     # Load df with lemmas
@@ -111,7 +111,7 @@ def main():
 
             except:
                 logger.info(
-                    f"No available lemmas in {destination_path.as_posix()}. \
+                    f"-- -- No available lemmas in {destination_path.as_posix()}. \
                     Loading from {source_path.as_posix()}...")
 
     if not args.no_preproc or not from_preproc:
