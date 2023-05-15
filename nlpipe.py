@@ -54,11 +54,16 @@ def main():
                         required=False, help="Context of the model to be used for calculating the embeddings.")
 
     args = parser.parse_args()
-    print(args)
 
     # Create logger object
     logging.basicConfig(level='INFO')
     logger = logging.getLogger('nlpPipeline')
+    
+    # Check that either NLP preprocessing or embeddings calculation is activated
+    if not args.no_preproc and not args.do_embeddings:
+        logger.error(
+            f"-- Either the flag for NLP preprocessing or that for the embeddings calculation need to be activated in order to proceed. Exiting... ")
+        sys.exit()
 
     # Check that the language is valid
     if args.lang not in ['en', 'es']:
@@ -206,10 +211,6 @@ def main():
         logger.info(f'-- -- Embeddings calculation starts...')
         start_time = time.time()
         em = EmbeddingsManager(logger=logger)
-        # corpus_df = em.generate_embeddings(corpus_df=corpus_df,
-        #                                    embeddings_model=args.embeddings_model,
-        #                                    max_seq_length=args.max_sequence_length,
-        #                                    nw=args.nw)
         corpus_df = em.bert_embeddings_from_df(
             df=corpus_df,
             text_column='raw_text',
