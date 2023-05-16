@@ -60,7 +60,7 @@ def main():
     logger = logging.getLogger('nlpPipeline')
     
     # Check that either NLP preprocessing or embeddings calculation is activated
-    if not args.no_preproc and not args.do_embeddings:
+    if args.no_preproc and not args.do_embeddings:
         logger.error(
             f"-- Either the flag for NLP preprocessing or that for the embeddings calculation need to be activated in order to proceed. Exiting... ")
         sys.exit()
