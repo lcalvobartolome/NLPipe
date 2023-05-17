@@ -1,7 +1,7 @@
 import logging
 import pathlib
 import re
-from typing import List
+from typing import List, Union
 
 import contractions
 import dask.dataframe as dd
@@ -161,13 +161,17 @@ class Pipe():
 
         return final_tokenized
 
-    def preproc(self, corpus_df: dd.DataFrame, nw=0, no_ngrams=False) -> dd.DataFrame:
+    def preproc(self,
+                corpus_df: Union[dd.DataFrame, pd.DataFrame],
+                use_dask: bool = False,
+                nw: int = 0,
+                no_ngrams: bool = False) -> Union[dd.DataFrame, pd.DataFrame]:
         """
         Invokes NLP pipeline and carries out, in addition, n-gram detection.
 
         Parameters
         ----------
-        corpus_df: dd.DataFrame
+        corpus_df: Union[dd.DataFrame, pd.DataFrame]
             Dataframe representation of the corpus to be preprocessed. 
             It needs to contain (at least) the following columns:
             - raw_text
@@ -178,7 +182,7 @@ class Pipe():
 
         Returns
         -------
-        corpus_df: dd.DataFrame
+        corpus_df: Union[dd.DataFrame, pd.DataFrame]
             Preprocessed DataFrame
             It needs to contain (at least) the following columns:
             - raw_text
@@ -187,26 +191,32 @@ class Pipe():
 
         # Lemmatize text
         self._logger.info("-- Lemmatizing text")
-        corpus_df["lemmas"] = corpus_df["raw_text"].apply(self.do_pipeline,
-                                                          meta=('lemmas', 'str'))
+        if use_dask:
+            corpus_df["lemmas"] = corpus_df["raw_text"].apply(self.do_pipeline,
+                                                              meta=('lemmas', 'str'))
+        else:
+            corpus_df["lemmas"] = corpus_df["raw_text"].apply(self.do_pipeline)
 
-        # this does the same but with batch preprocessing
-        # def apply_pipeline_to_partition(partition):
-        #    return partition['raw_text'].apply(self.do_pipeline)
-        # lemmas = corpus_df.map_partitions(apply_pipeline_to_partition, meta=('lemmas', 'object'))
-
+        # If no_ngrams is False, carry out n-grams detection
         if not no_ngrams:
+
+            def get_ngram(doc):
+                return " ".join(phrase_model[doc])
+
             # Create corpus from tokenized lemmas
             self._logger.info(
                 "-- Creating corpus from lemmas for n-grams detection")
-            with ProgressBar():
-                if nw > 0:
-                    lemmas = corpus_df["lemmas"].compute(
-                        scheduler='processes', num_workers=nw)
-                else:
-                    # Use Dask default number of workers (i.e., number of cores)
-                    lemmas = corpus_df["lemmas"].compute(
-                        scheduler='processes')
+            if use_dask:
+                with ProgressBar():
+                    if nw > 0:
+                        lemmas = corpus_df["lemmas"].compute(
+                            scheduler='processes', num_workers=nw)
+                    else:
+                        # Use Dask default number of workers (i.e., number of cores)
+                        lemmas = corpus_df["lemmas"].compute(
+                            scheduler='processes')
+            else:
+                lemmas = corpus_df["lemmas"]
 
             # Create Phrase model for n-grams detection
             self._logger.info("-- Creating Phrase model")
@@ -215,16 +225,20 @@ class Pipe():
             # Carry out n-grams substitution
             self._logger.info("-- Carrying out n-grams substitution")
 
-            def get_ngram(doc):
-                return " ".join(phrase_model[doc])
-
-            corpus_df["lemmas"] = \
-                corpus_df["lemmas"].apply(
-                    get_ngram, meta=('lemmas', 'str'))
+            if use_dask:
+                corpus_df["lemmas"] = \
+                    corpus_df["lemmas"].apply(
+                        get_ngram, meta=('lemmas', 'str'))
+            else:
+                corpus_df["lemmas"] = corpus_df["lemmas"].apply(get_ngram)
 
         else:
-            corpus_df["lemmas"] = \
-                corpus_df["lemmas"].apply(
-                    lambda x: " ".join(x), meta=('lemmas', 'str'))
+            if use_dask:
+                corpus_df["lemmas"] = \
+                    corpus_df["lemmas"].apply(
+                        lambda x: " ".join(x), meta=('lemmas', 'str'))
+            else:
+                corpus_df["lemmas"] = corpus_df["lemmas"].apply(
+                    lambda x: " ".join(x))
 
         return corpus_df

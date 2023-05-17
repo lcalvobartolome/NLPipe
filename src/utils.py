@@ -28,17 +28,18 @@ def det(x: str) -> str:
     return lang
 
 
-def max_column_length(df: dd.DataFrame,
-                      col_name: str) -> int:
+def max_column_length(df, col_name, use_dask=False):
     """
-    Returns the maximum length of values in a Dask DataFrame column.
+    Returns the maximum length of values in a DataFrame column.
 
     Parameters
     ----------
-    df : dd.DataFrame
-        Dask DataFrame
+    df : DataFrame
+        DataFrame (pandas or Dask)
     col_name : str
         Name of the column whose length is to be calculated
+    use_dask : bool, optional
+        Flag to indicate whether the DataFrame is Dask or not
 
     Returns
     -------
@@ -46,14 +47,21 @@ def max_column_length(df: dd.DataFrame,
         Maximum length of the values in the column
     """
 
-    lengths = df[col_name].str.len()
-    with ProgressBar():
-        max_length = lengths.max().compute(scheduler='processes')
+    if use_dask:
+        lengths = df[col_name].str.len()
+        with ProgressBar():
+            max_length = lengths.max().compute(scheduler='processes')
+    else:
+        lengths = df[col_name].str.len()
+        max_length = lengths.max()
+
     return max_length
 
 
 def save_parquet(outFile: pathlib.Path,
-                 df: dd.DataFrame, nw=0) -> None:
+                 df: dd.DataFrame,
+                 use_dask=False,
+                 nw=0) -> None:
     """
     Saves a Dask DataFrame in a parquet file.
 
@@ -61,8 +69,10 @@ def save_parquet(outFile: pathlib.Path,
     ----------
     outFile : pathlib.Path
         Path to the parquet file to be saved
-    df : dd.DataFrame
-        Dask DataFrame to be saved
+    df : DataFrame
+        DataFrame (pandas or Dask)
+    use_dask : bool, optional
+        Flag to indicate whether the DataFrame is Dask or not
     nw : int, optional
         Number of workers to use with Dask
     """
@@ -71,13 +81,17 @@ def save_parquet(outFile: pathlib.Path,
     elif outFile.is_dir():
         shutil.rmtree(outFile)
 
-    with ProgressBar():
-        if nw > 0:
-            df.to_parquet(outFile, write_index=False, schema="infer", compute_kwargs={
-                'scheduler': 'processes', 'num_workers': nw})
-        else:
-            # Use Dask default number of workers (i.e., number of cores)
-            df.to_parquet(outFile, write_index=False, schema="infer", compute_kwargs={
-                'scheduler': 'processes'})
+    if use_dask:
+        with ProgressBar():
+            if nw > 0:
+                df.to_parquet(outFile, write_index=False, schema="infer", compute_kwargs={
+                    'scheduler': 'processes', 'num_workers': nw})
+            else:
+                # Use Dask default number of workers (i.e., number of cores)
+                df.to_parquet(outFile, write_index=False, schema="infer", compute_kwargs={
+                    'scheduler': 'processes'})
+    else:
+        df.to_parquet(outFile)
+        #df.to_parquet(outFile, write_index=False)
 
     return

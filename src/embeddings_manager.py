@@ -3,7 +3,7 @@ import logging
 import os
 import warnings
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import dask.array as da
 import dask.dataframe as dd
@@ -95,17 +95,18 @@ class EmbeddingsManager(object):
         return embeddings
     
     def bert_embeddings_from_df(self,
-                                df: dd.DataFrame,
+                                df: Union[dd.DataFrame, pd.DataFrame],
                                 text_column: str,
                                 sbert_model_to_load: str,
-                                batch_size=32,
-                                max_seq_length=None):
+                                batch_size:int = 32,
+                                max_seq_length=None,
+                                use_dask=False) -> Union[dd.DataFrame, pd.DataFrame]:
         """
         Creates SBERT Embeddings for each row in a dask dataframe and saves the embeddings in a new column
 
         Parameters
         ----------
-        df : pd.DataFrame
+        df : Union[dd.DataFrame, pd.DataFrame]
             The dataframe containing the sentences to embed
         text_column : str
             The name of the column containing the text to embed
@@ -118,7 +119,7 @@ class EmbeddingsManager(object):
 
         Returns
         -------
-        df: dd.DataFrame
+        df: Union[dd.DataFrame, pd.DataFrame]
             The dataframe with the original data and the generated embeddings
         """
         
@@ -133,11 +134,14 @@ class EmbeddingsManager(object):
             embedding = model.encode(text,
                                      show_progress_bar=True, batch_size=batch_size)
             # Convert to string
-            embedding = ''.join(str(x) for x in embedding)
+            embedding = ' '.join(str(x) for x in embedding)
             return embedding
         
-        df["embeddings"] = df[text_column].apply(
-            encode_text, meta=('embeddings', 'str'))
+        if use_dask:
+            df["embeddings"] = df[text_column].apply(
+                encode_text, meta=('embeddings', 'str'))
+        else:
+            df["embeddings"] = df[text_column].apply(encode_text)
         
         return df
 

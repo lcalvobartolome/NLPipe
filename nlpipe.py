@@ -35,8 +35,6 @@ def main():
                         required=True, help="Path to save the preprocessed data")
     parser.add_argument("--stw_path", type=str, default="data/stw_lists",
                         required=False, help="Folder path for stopwords")
-    parser.add_argument("--nw", type=int, default=0,
-                        required=False, help="Number of workers to use with Dask")
     parser.add_argument("--lang", type=str, default="en",
                         required=False, help="Language of the text to be preprocessed (en/es)")
     parser.add_argument("--spacy_model", type=str, default="en_core_web_sm",
@@ -46,19 +44,23 @@ def main():
     parser.add_argument('--no_preproc', default=False, required=False,
                         action='store_true', help="Flag to disable NLP preprocessing")
     parser.add_argument('--do_embeddings', default=False, required=False,
-                        action='store_true', help="Flag to acticate embeddings calculation")
+                        action='store_true', help="Flag to activate embeddings calculation")
     parser.add_argument("--embeddings_model", type=str,
                         default="all-mpnet-base-v2", required=False,
                         help="Model to be used for calculating the embeddings")
     parser.add_argument("--max_sequence_length", type=int, default=384,
                         required=False, help="Context of the model to be used for calculating the embeddings.")
+    parser.add_argument("--use_dask", default=False, required=False,
+                        help="Flag to activate processing with Dask. By default, pandas is used")
+    parser.add_argument("--nw", type=int, default=0,
+                        required=False, help="Number of workers to use with Dask")
 
     args = parser.parse_args()
 
     # Create logger object
     logging.basicConfig(level='INFO')
     logger = logging.getLogger('nlpPipeline')
-    
+
     # Check that either NLP preprocessing or embeddings calculation is activated
     if args.no_preproc and not args.do_embeddings:
         logger.error(
@@ -80,6 +82,11 @@ def main():
         sys.exit()
 
     destination_path = pathlib.Path(args.destination_path)
+    
+    # Logging computing library used
+    library = "Dask" if args.use_dask else "Pandas" 
+    logger.info(
+        f"-- -- Using {library} for computation... ")
 
     # If do_embeddings and no_preproc flags are activated, we check if there is already preprocessed data available in destination_path. If there is, we load such a dataframe; otherwise, we load the given by the source_path
     from_preproc = False
@@ -112,7 +119,8 @@ def main():
                     Loading from there...")
 
                     # Load df with lemmas
-                    corpus_df = dd.read_parquet(destination_path)
+                    corpus_df = dd.read_parquet(
+                        destination_path) if args.use_dask else pd.read_parquet(destination_path)
 
             except:
                 logger.info(
@@ -135,10 +143,16 @@ def main():
             logger.error(f"Unknown source: {args.source}. Exiting...")
             sys.exit()
 
-        readers = {
-            "xlsx": lambda path: dd.from_pandas(pd.read_excel(path), npartitions=3).fillna(""),
-            "parquet": lambda path: dd.read_parquet(path).fillna("")
-        }
+        if args.use_dask:
+            readers = {
+                "xlsx": lambda path: dd.from_pandas(pd.read_excel(path), npartitions=3).fillna(""),
+                "parquet": lambda path: dd.read_parquet(path).fillna("")
+            }
+        else:
+            readers = {
+                "xlsx": lambda path: pd.read_excel(path).fillna(""),
+                "parquet": lambda path: pd.read_parquet(path).fillna("")
+            }
 
         # Get reader according to file format
         if args.source_type in readers:
@@ -151,19 +165,31 @@ def main():
 
         # Detect abstracts' language and filter out those that are not in the language specified in args.lang
         logger.info(f"-- Detecting language...")
-        df = \
-            df[df[raw_text_fld].apply(
-                det,
-                meta=('langue', 'str')) == args.lang]
+        start_time = time.time()
+        if args.use_dask:
+            df = \
+                df[df[raw_text_fld].apply(
+                    det,
+                    meta=('langue', 'str')) == args.lang]
+        else:
+            df = df[df[raw_text_fld].apply(det) == args.lang]
+        logger.info(
+            f'-- -- Language detection finished in {(time.time() - start_time)}')
 
         # Concatenate title + abstract/summary if title is given
         if title_fld != "":
-            df["raw_text"] = \
-                df[[title_fld, raw_text_fld]].apply(
-                    " ".join, axis=1, meta=('raw_text', 'str'))
+            if args.use_dask:
+                df["raw_text"] = \
+                    df[[title_fld, raw_text_fld]].apply(
+                        " ".join, axis=1, meta=('raw_text', 'str'))
+            else:
+                df["raw_text"] = df[title_fld] + " " + df[raw_text_fld]
         else:
             # Rename text field to raw_text
-            df = df.rename(columns={raw_text_fld: 'raw_text'})
+            if args.use_dask:
+                df = df.rename(columns={raw_text_fld: 'raw_text'})
+            else:
+                df.rename(columns={raw_text_fld: "raw_text"})
 
         # Keep only necessary columns
         corpus_df = df[[id_fld, 'raw_text']]
@@ -176,7 +202,10 @@ def main():
     if not args.no_preproc:
         # Check max length of raw_text column to pass to the Pipe class
         logger.info(f"-- Checking max length of column 'raw_text'...")
-        max_len = max_column_length(corpus_df, 'raw_text')
+        start_time = time.time()
+        max_len = max_column_length(corpus_df, 'raw_text', args.use_dask)
+        logger.info(
+            f'-- -- Max length calculation finished in {(time.time() - start_time)}')
         logger.info(f"-- Max length of column 'raw_text' is {max_len}.")
 
         # Get stopword lists
@@ -196,14 +225,18 @@ def main():
         logger.info(f'-- -- NLP preprocessing starts...')
 
         start_time = time.time()
-        corpus_df = nlpPipeline.preproc(corpus_df, args.nw, args.no_ngrams)
+        corpus_df = nlpPipeline.preproc(corpus_df=corpus_df,
+                                        use_dask=args.use_dask,
+                                        nw=args.nw,
+                                        no_ngrams=args.no_ngrams)
         logger.info(
             f'-- -- NLP preprocessing finished in {(time.time() - start_time)}')
 
         # Save new df in parquet file
         logger.info(
             f'-- -- Saving preprocessed data without embeddings in {destination_path.as_posix()}...')
-        save_parquet(outFile=destination_path, df=corpus_df, nw=args.nw)
+        save_parquet(outFile=destination_path, df=corpus_df,
+                     use_dask=args.use_dask, nw=args.nw)
 
     # Calculate embeddings if flag is activated
     if args.do_embeddings:
@@ -216,7 +249,8 @@ def main():
             text_column='raw_text',
             sbert_model_to_load=args.embeddings_model,
             batch_size=32,
-            max_seq_length=args.max_sequence_length)
+            max_seq_length=args.max_sequence_length,
+            use_dask=args.use_dask)
 
         logger.info(
             f'-- -- Embeddings calculation finished in {(time.time() - start_time)}')
@@ -231,7 +265,8 @@ def main():
         # Save new df in parquet file
         logger.info(
             f'-- -- Saving final preprocessed data in {destination_path.as_posix()}...')
-        save_parquet(outFile=destination_path, df=corpus_df, nw=args.nw)
+        save_parquet(outFile=destination_path, df=corpus_df,
+                     use_dask=args.use_dask, nw=args.nw)
 
     return
 
