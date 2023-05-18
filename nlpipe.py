@@ -186,11 +186,8 @@ def main():
                 df["raw_text"] = df[title_fld] + " " + df[raw_text_fld]
         else:
             # Rename text field to raw_text
-            if args.use_dask:
-                df = df.rename(columns={raw_text_fld: 'raw_text'})
-            else:
-                df.rename(columns={raw_text_fld: "raw_text"})
-
+            df = df.rename(columns={raw_text_fld: 'raw_text'})
+          
         # Keep only necessary columns
         corpus_df = df[[id_fld, 'raw_text']]
 
