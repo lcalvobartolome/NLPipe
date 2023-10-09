@@ -27,6 +27,7 @@ class Pipe():
                  spaCy_model: str,
                  language: str,
                  max_length: int,
+                 raw_text_cols: List[str],
                  logger=None):
         """
         Initilization Method
@@ -42,6 +43,8 @@ class Pipe():
             Language of the text to be preprocessed (en/es)
         max_length: int
             Maximum length of the text to be processed
+        raw_text_cols : List[str]
+            List of columns containing the raw text to be preprocessed
         logger: Logger object
             To log object activity
         """
@@ -60,6 +63,7 @@ class Pipe():
         # Download spaCy model if not already downloaded and load
         self._nlp = load_spacy(spaCy_model, exclude=['parser', 'ner'])
         self._nlp.max_length = max_length + round(0.1 * max_length)
+        self._raw_text_cols = raw_text_cols
 
         return
 
@@ -109,7 +113,6 @@ class Pipe():
         text: str
             Replaced text
         """
-
         for (raw, rep) in patterns:
             regex = re.compile(raw, flags=re.IGNORECASE)
             text = regex.sub(rep, text)
@@ -188,57 +191,65 @@ class Pipe():
             - raw_text
             - lemmas
         """
-
-        # Lemmatize text
-        self._logger.info("-- Lemmatizing text")
-        if use_dask:
-            corpus_df["lemmas"] = corpus_df["raw_text"].apply(self.do_pipeline,
-                                                              meta=('lemmas', 'str'))
+        
+        if len(self._raw_text_cols) > 1:
+            new_raw_text_cols = [col.split("_")[0] + "_lemmas" for col in self._raw_text_cols]
         else:
-            corpus_df["lemmas"] = corpus_df["raw_text"].apply(self.do_pipeline)
-
-        # If no_ngrams is False, carry out n-grams detection
-        if not no_ngrams:
-
-            def get_ngram(doc):
-                return " ".join(phrase_model[doc])
-
-            # Create corpus from tokenized lemmas
-            self._logger.info(
-                "-- Creating corpus from lemmas for n-grams detection")
+            new_raw_text_cols = ["lemmas"]
+                        
+        for col, new_col in zip(self._raw_text_cols, new_raw_text_cols):
+            # Lemmatize text
+            self._logger.info(f"-- Lemmatizing text of {col}")
             if use_dask:
-                with ProgressBar():
-                    if nw > 0:
-                        lemmas = corpus_df["lemmas"].compute(
-                            scheduler='processes', num_workers=nw)
-                    else:
-                        # Use Dask default number of workers (i.e., number of cores)
-                        lemmas = corpus_df["lemmas"].compute(
-                            scheduler='processes')
+                corpus_df[new_col] = corpus_df[col].apply(
+                    self.do_pipeline,
+                    meta=('x', 'str'))
             else:
-                lemmas = corpus_df["lemmas"]
+                corpus_df[new_col] = corpus_df[col].apply(
+                    self.do_pipeline)
+            
+            # If no_ngrams is False, carry out n-grams detection
+            if not no_ngrams:
 
-            # Create Phrase model for n-grams detection
-            self._logger.info("-- Creating Phrase model")
-            phrase_model = Phrases(lemmas, min_count=2, threshold=20)
+                def get_ngram(doc):
+                    return " ".join(phrase_model[doc])
 
-            # Carry out n-grams substitution
-            self._logger.info("-- Carrying out n-grams substitution")
+                # Create corpus from tokenized lemmas
+                self._logger.info(
+                    "-- Creating corpus from lemmas for n-grams detection")
+                if use_dask:
+                    with ProgressBar():
+                        if nw > 0:
+                            lemmas = corpus_df[new_col].compute(
+                                scheduler='processes', num_workers=nw)
+                        else:
+                            # Use Dask default number of workers (i.e., number of cores)
+                            lemmas = corpus_df[new_col].compute(
+                                scheduler='processes')
+                else:
+                    lemmas = corpus_df[new_col]
 
-            if use_dask:
-                corpus_df["lemmas"] = \
-                    corpus_df["lemmas"].apply(
-                        get_ngram, meta=('lemmas', 'str'))
+                # Create Phrase model for n-grams detection
+                self._logger.info("-- Creating Phrase model")
+                phrase_model = Phrases(lemmas, min_count=2, threshold=20)
+
+                # Carry out n-grams substitution
+                self._logger.info("-- Carrying out n-grams substitution")
+
+                if use_dask:
+                    corpus_df[new_col] = \
+                        corpus_df[new_col].apply(
+                            get_ngram, meta=('x', 'str'))
+                else:
+                    corpus_df[new_col] = corpus_df[new_col].apply(get_ngram)
+
             else:
-                corpus_df["lemmas"] = corpus_df["lemmas"].apply(get_ngram)
-
-        else:
-            if use_dask:
-                corpus_df["lemmas"] = \
-                    corpus_df["lemmas"].apply(
-                        lambda x: " ".join(x), meta=('lemmas', 'str'))
-            else:
-                corpus_df["lemmas"] = corpus_df["lemmas"].apply(
-                    lambda x: " ".join(x))
+                if use_dask:
+                    corpus_df[new_col] = \
+                        corpus_df[new_col].apply(
+                            lambda x: " ".join(x), meta=('x', 'str'))
+                else:
+                    corpus_df[new_col] = corpus_df[new_col].apply(
+                        lambda x: " ".join(x))
 
         return corpus_df

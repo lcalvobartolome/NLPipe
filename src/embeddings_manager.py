@@ -96,7 +96,7 @@ class EmbeddingsManager(object):
     
     def bert_embeddings_from_df(self,
                                 df: Union[dd.DataFrame, pd.DataFrame],
-                                text_column: str,
+                                text_columns: List[str],
                                 sbert_model_to_load: str,
                                 batch_size:int = 32,
                                 max_seq_length=None,
@@ -128,8 +128,6 @@ class EmbeddingsManager(object):
         if max_seq_length is not None:
             model.max_seq_length = max_seq_length
 
-        self._check_max_local_length(max_seq_length, df[text_column])
-
         def encode_text(text):
             embedding = model.encode(text,
                                      show_progress_bar=True, batch_size=batch_size)
@@ -137,11 +135,16 @@ class EmbeddingsManager(object):
             embedding = ' '.join(str(x) for x in embedding)
             return embedding
         
-        if use_dask:
-            df["embeddings"] = df[text_column].apply(
-                encode_text, meta=('embeddings', 'str'))
-        else:
-            df["embeddings"] = df[text_column].apply(encode_text)
+        for col in text_columns:
+            self._check_max_local_length(max_seq_length, df[col])
+            
+            col_emb = col.split("_")[0]+"_embeddings" if len(text_columns) > 1 else "embeddings"
+
+            if use_dask:
+                df[col_emb] = df[col].apply(
+                    encode_text, meta=('x', 'str'))
+            else:
+                df[col_emb] = df[col].apply(encode_text)
         
         return df
 

@@ -88,7 +88,7 @@ def main():
     logger.info(
         f"-- -- Using {library} for computation... ")
 
-    # If do_embeddings and no_preproc flags are activated, we check if there is already preprocessed data available in destination_path. If there is, we load such a dataframe; otherwise, we load the given by the source_path
+    # If do_embeddings and no_preproc flags are activated, we check if there is already preprocessed data available in destination_path. If there is, we load such a dataframe; otherwise, we load the one given by the source_path
     from_preproc = False
     if args.do_embeddings and args.no_preproc:
         if destination_path.exists():
@@ -110,10 +110,10 @@ def main():
 
                 logger.info(
                     f"-- -- Available column names: {str(column_names)}")
-
-                if 'lemmas' in column_names:
-                    from_preproc = True
-
+                
+                from_preproc = any("lemmas" in col for col in column_names)
+                print(from_preproc)
+                if from_preproc:
                     logger.info(
                         f"-- -- Lemmas in {destination_path.as_posix()}. \
                     Loading from there...")
@@ -121,8 +121,9 @@ def main():
                     # Load df with lemmas
                     corpus_df = dd.read_parquet(
                         destination_path) if args.use_dask else pd.read_parquet(destination_path)
+                    raw_txt_flds = [col for col in corpus_df.columns if "raw_text" in col]
 
-            except:
+            except Exception as e:
                 logger.info(
                     f"-- -- No available lemmas in {destination_path.as_posix()}. \
                     Loading from {source_path.as_posix()}...")
@@ -165,18 +166,23 @@ def main():
 
         # Detect abstracts' language and filter out those that are not in the language specified in args.lang
         logger.info(f"-- Detecting language...")
+        if len(raw_text_fld.split(",")) > 1:
+            fld_lan = raw_text_fld.split(",")[0]
+        else:
+            fld_lan = raw_text_fld
         start_time = time.time()
         if args.use_dask:
             df = \
-                df[df[raw_text_fld].apply(
+                df[df[fld_lan].apply(
                     det,
                     meta=('langue', 'str')) == args.lang]
         else:
-            df = df[df[raw_text_fld].apply(det) == args.lang]
+            df = df[df[fld_lan].apply(det) == args.lang]
         logger.info(
             f'-- -- Language detection finished in {(time.time() - start_time)}')
 
         # Concatenate title + abstract/summary if title is given
+        raw_txt_flds = ['raw_text']
         if title_fld != "":
             if args.use_dask:
                 df["raw_text"] = \
@@ -184,26 +190,36 @@ def main():
                         " ".join, axis=1, meta=('raw_text', 'str'))
             else:
                 df["raw_text"] = df[title_fld] + " " + df[raw_text_fld]
+        elif "," in raw_text_fld:
+            # If raw_text_fld is a list of fields, we preprocess each field separately
+            raw_mappings = {fld: fld+"_raw_text" for fld in raw_text_fld.split(",")}
+            df = df.rename(columns=raw_mappings)
+            raw_txt_flds = [value for _,value in raw_mappings.items()]
         else:
             # Rename text field to raw_text
             df = df.rename(columns={raw_text_fld: 'raw_text'})
           
         # Keep only necessary columns
-        corpus_df = df[[id_fld, 'raw_text']]
+        corpus_df = df[[id_fld,*raw_txt_flds]]
 
         # Filter out rows with no raw_text
         corpus_df = corpus_df.replace("nan", np.nan)
-        corpus_df = corpus_df.dropna(subset=["raw_text"], how="any")
-
+        corpus_df = corpus_df.dropna(subset=[*raw_txt_flds], how="any")
+        
     # Carry out NLP preprocessing if flag is not deactivated
     if not args.no_preproc:
         # Check max length of raw_text column to pass to the Pipe class
-        logger.info(f"-- Checking max length of column 'raw_text'...")
-        start_time = time.time()
-        max_len = max_column_length(corpus_df, 'raw_text', args.use_dask)
-        logger.info(
-            f'-- -- Max length calculation finished in {(time.time() - start_time)}')
-        logger.info(f"-- Max length of column 'raw_text' is {max_len}.")
+        logger.info(f"-- Checking max length of 'raw_text' columns ...")
+        lenghts = []
+        for raw_text_col in raw_txt_flds:
+            start_time = time.time()
+            max_len = max_column_length(corpus_df, raw_text_col, args.use_dask)
+            lenghts.append(max_len)
+            logger.info(
+                f'-- -- Max length calculation finished in {(time.time() - start_time)}')
+            logger.info(f"-- Max length of column {raw_text_col} is {max_len}.")
+        lenghts.sort(reverse=True)
+        max_len = lenghts[0]
 
         # Get stopword lists
         stw_lsts = []
@@ -217,6 +233,7 @@ def main():
                            spaCy_model=args.spacy_model,
                            language=args.lang,
                            max_length=max_len,
+                           raw_text_cols=raw_txt_flds,
                            logger=logger)
 
         logger.info(f'-- -- NLP preprocessing starts...')
@@ -243,7 +260,7 @@ def main():
         em = EmbeddingsManager(logger=logger)
         corpus_df = em.bert_embeddings_from_df(
             df=corpus_df,
-            text_column='raw_text',
+            text_columns=raw_txt_flds,
             sbert_model_to_load=args.embeddings_model,
             batch_size=32,
             max_seq_length=args.max_sequence_length,
