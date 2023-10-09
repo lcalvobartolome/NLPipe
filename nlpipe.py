@@ -18,8 +18,7 @@ from src.utils import det, max_column_length, save_parquet
 
 # ########################
 # Main body of application
-
-
+# ########################
 def main():
 
     # Read input arguments
@@ -136,7 +135,7 @@ def main():
 
         if args.source in field_mappings:
             mapping = field_mappings[args.source]
-            logger.info(f"Reading from {args.source}...")
+            logger.info(f"-- -- Reading from {args.source}...")
             id_fld = mapping["id"]
             raw_text_fld = mapping["raw_text"]
             title_fld = mapping["title"]
@@ -166,10 +165,7 @@ def main():
 
         # Detect abstracts' language and filter out those that are not in the language specified in args.lang
         logger.info(f"-- Detecting language...")
-        if len(raw_text_fld.split(",")) > 1:
-            fld_lan = raw_text_fld.split(",")[0]
-        else:
-            fld_lan = raw_text_fld
+        fld_lan = raw_text_fld[0] if isinstance(raw_text_fld, list) else raw_text_fld
         start_time = time.time()
         if args.use_dask:
             df = \
@@ -181,23 +177,27 @@ def main():
         logger.info(
             f'-- -- Language detection finished in {(time.time() - start_time)}')
 
-        # Concatenate title + abstract/summary if title is given
         raw_txt_flds = ['raw_text']
-        if title_fld != "":
+        # Concatenate title + abstract/summary if title is given
+        if title_fld != "" and not isinstance(raw_text_fld, list):
             if args.use_dask:
                 df["raw_text"] = \
                     df[[title_fld, raw_text_fld]].apply(
                         " ".join, axis=1, meta=('raw_text', 'str'))
             else:
                 df["raw_text"] = df[title_fld] + " " + df[raw_text_fld]
-        elif "," in raw_text_fld:
-            # If raw_text_fld is a list of fields, we preprocess each field separately
-            raw_mappings = {fld: fld+"_raw_text" for fld in raw_text_fld.split(",")}
+        # Only the raw_text field will be used
+        elif not isinstance(raw_text_fld, list):
+            # Rename text field to raw_text
+            df = df.rename(columns={raw_text_fld: 'raw_text'})
+        # If raw_text_fld is a list of fields,  we preprocess each field separately
+        elif isinstance(raw_text_fld, list):
+            raw_mappings = {fld: fld+"_raw_text" for fld in raw_text_fld}
             df = df.rename(columns=raw_mappings)
             raw_txt_flds = [value for _,value in raw_mappings.items()]
         else:
-            # Rename text field to raw_text
-            df = df.rename(columns={raw_text_fld: 'raw_text'})
+            logger.error(f"Invalid raw_text field provided. Exiting...")
+            sys.exit()
           
         # Keep only necessary columns
         corpus_df = df[[id_fld,*raw_txt_flds]]

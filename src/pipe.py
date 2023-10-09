@@ -84,7 +84,7 @@ class Pipe():
             [stopword for stw_df in stw_list for stopword in stw_df['stopwords']]
         self._stw_list = list(dict.fromkeys(stw_list))  # remove duplicates
         self._logger.info(
-            f"Stopwords list created with {len(stw_list)} items.")
+            f"-- -- Stopwords list created with {len(stw_list)} items.")
 
         return
 

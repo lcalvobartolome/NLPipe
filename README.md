@@ -17,15 +17,31 @@ To install this project, follow these steps:
 
 To use this project, follow these steps:
 
-1. Add your dataset's information about the ID, raw text and title names in the `config.json`, as follows:
+1. Add your dataset's information in the `config.json`.  The library offers support for two distinct modes, depending on your specific requirements:
 
-   ```json
-    "my_dataset": {
-        "id": "id_field_name",
-        "raw_text": "raw_text_field_name",
-        "title": "title_field_name"
-    }
-    ```
+    * *Mode 1: Concatenation of `'title'` and `'raw_text'` columns*
+
+        If your preferred approach involves lemmatizing or calculating embeddings based on the concatenation of a `'title'` and `'raw_text'` column (commonly used in tasks involving topic modeling of research papers), you should specify the following details for your dataset:
+
+        ```json
+        "my_dataset": {
+            "id": "id_field_name",
+            "raw_text": "raw_text_field_name",
+            "title": "title_field_name"
+        }
+        ```
+
+    * *Model 2: Mode 2: Independent Columns (N Columns)*
+
+        If you intend to lemmatize or calculate embeddings for N independent columns (e.g., `'col1'`, `'col2'`, `'col3'`), these columns should be provided as a list within the 'raw_text' field, while leaving the `'title'` field empty
+
+        ```json
+        "my_dataset": {
+            "id": "id_field_name",
+            "raw_text": ["col1", "col2", "col3"],
+            "title": ""
+        }
+        ```
 
 2. Run the main script using the following command:
 
