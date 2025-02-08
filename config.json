@@ -24,5 +24,15 @@
         "id": "id",
         "raw_text": "description",
         "title": "title"
+    },
+    "es_2025-02-08_segmented_dataset.parquet.gzip": {
+        "id": "id",
+        "raw_text": "text",
+        "title": "title"
+    },
+    "en_2025-02-08_segmented_dataset.parquet.gzip": {
+        "id": "id",
+        "raw_text": "text",
+        "title": "title"
     }
 }

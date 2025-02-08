@@ -10,7 +10,7 @@ from dask.diagnostics import ProgressBar
 from gensim.models.phrases import Phrases
 from spacy_download import load_spacy
 
-import src.acronyms as acronyms
+import src.NLPipe.src.acronyms as acronyms
 
 
 class Pipe():

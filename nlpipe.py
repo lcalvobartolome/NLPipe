@@ -12,9 +12,9 @@ import pyarrow.parquet as pq
 from pyfiglet import figlet_format
 from termcolor import cprint
 
-from src.embeddings_manager import EmbeddingsManager
-from src.pipe import Pipe
-from src.utils import det, max_column_length, save_parquet
+from src.NLPipe.src.embeddings_manager import EmbeddingsManager
+from src.NLPipe.src.pipe import Pipe
+from src.NLPipe.src.utils import det, max_column_length, save_parquet
 
 # ########################
 # Main body of application
@@ -130,7 +130,8 @@ def main():
     if not args.no_preproc or not from_preproc:
 
         # Read config file to get the id, title and abstract fields associated with the dataset under preprocessing
-        with open('config.json') as f:
+
+        with open('/export/usuarios_ml4ds/ammesa/TFG-LLMs/src/NLPipe/config.json') as f:
             field_mappings = json.load(f)
 
         if args.source in field_mappings:
@@ -173,6 +174,8 @@ def main():
                     det,
                     meta=('langue', 'str')) == args.lang]
         else:
+            print("Available columns:", df.columns)
+            print("Expected language column (fld_lan):", fld_lan)
             df = df[df[fld_lan].apply(det) == args.lang]
         logger.info(
             f'-- -- Language detection finished in {(time.time() - start_time)}')
