@@ -34,5 +34,15 @@
         "id": "id",
         "raw_text": "text",
         "title": "title"
+    },
+    "en_2025-02-20_segmented_dataset.parquet.gzip": {
+        "id": "id_preproc",
+        "raw_text": "text",
+        "title": "title"
+    },
+    "es_2025-02-20_segmented_dataset.parquet.gzip": {
+        "id": "id_preproc",
+        "raw_text": "text",
+        "title": "title"
     }
 }
