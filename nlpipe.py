@@ -12,9 +12,9 @@ import pyarrow.parquet as pq
 from pyfiglet import figlet_format
 from termcolor import cprint
 
-from src.NLPipe.src.embeddings_manager import EmbeddingsManager
-from src.NLPipe.src.pipe import Pipe
-from src.NLPipe.src.utils import det, max_column_length, save_parquet
+from src.embeddings_manager import EmbeddingsManager
+from src.pipe import Pipe
+from src.utils import det, max_column_length, save_parquet
 
 # ########################
 # Main body of application
