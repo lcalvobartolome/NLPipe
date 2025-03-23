@@ -53,6 +53,8 @@ def main():
                         help="Flag to activate processing with Dask. By default, pandas is used")
     parser.add_argument("--nw", type=int, default=0,
                         required=False, help="Number of workers to use with Dask")
+    parser.add_argument("--config_file", type=str, default="config.json",
+                        required=False, help="Path to the configuration file")
 
     args = parser.parse_args()
 
@@ -131,7 +133,7 @@ def main():
 
         # Read config file to get the id, title and abstract fields associated with the dataset under preprocessing
 
-        with open('/export/usuarios_ml4ds/ammesa/TFG-LLMs/src/NLPipe/config.json') as f:
+        with open(args.config_file) as f:
             field_mappings = json.load(f)
 
         if args.source in field_mappings:
@@ -147,11 +149,13 @@ def main():
         if args.use_dask:
             readers = {
                 "xlsx": lambda path: dd.from_pandas(pd.read_excel(path), npartitions=3).fillna(""),
+                "csv": lambda path: dd.read_csv(path).fillna(""),
                 "parquet": lambda path: dd.read_parquet(path).fillna("")
             }
         else:
             readers = {
                 "xlsx": lambda path: pd.read_excel(path).fillna(""),
+                "csv": lambda path: pd.read_csv(path).fillna(""),
                 "parquet": lambda path: pd.read_parquet(path).fillna("")
             }
 
