@@ -69,7 +69,7 @@ def main():
         sys.exit()
 
     # Check that the language is valid
-    if args.lang not in ['en', 'es']:
+    if args.lang not in ['en', 'es', 'de']:
         logger.error(
             f"-- The language {args.lang} is not supported by the tool. Exiting... ")
         sys.exit()
