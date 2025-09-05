@@ -2,7 +2,7 @@
 
 [![PyPI - License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Nemesis1303/NLPipe/blob/main/LICENSE)
 
-This GitHub repository hosts an NLP pipeline based on Spacy and Gensim for topic modeling preprocessing in English and Spanish and calculation of Transformer-based embeddings. The repository contains the necessary code and files for the pipeline implementation.
+This GitHub repository hosts an NLP pipeline based on Spacy and Gensim for topic modeling preprocessing in English, Spanish, and German, as well as the calculation of Transformer-based embeddings. The repository contains the necessary code and files for the pipeline implementation.
 
 ## Installation
 
@@ -67,39 +67,6 @@ To use this project, follow these steps:
 
 > *Note that you need to choose the Spacy model according to the language of the text to be preprocessed. For example, if the text is in `English`, you can choose one out of `en_core_web_sm` | `en_core_web_md` | `en_core_web_lg` | `en_core_web_trf`. In case the language of the text is Spanish, the following are available: `es_core_news_sm` | `es_core_news_md` | `es_core_news_lg` | `es_core_news_trf`. In general, if you have enough computational resources and need advanced text processing capabilities, `xx_core_xx_lg` or `xx_core_xx_trf` are the best choices. However, if you have limited resources or need to process text quickly, `xx_core_xx_sm` might be a better option. `xx_core_xx_md` provides a balance between the latter options.*
 >> **If you are using transformer models, you still need to install spacy-transformers yourself!**
-
-## Directory Structure
-
-The repository is organized as follows:
-
-```bash
-NLPipe/
-├── data/
-│   ├── stw_lists/
-│   │   ├── en/
-│   │   │   ├── stopwords_atire_ncbi.txt
-│   │   │   ├── stopwords_ebscohost_medline_cinahl.txt
-│   │   │   ├── stopwords_ovid.txt
-│   │   │   ├── stopwords_pubmed.txt
-│   │   │   ├── stopwords_technical.txt
-│   │   │   ├── stopwords_UPSTO.txt
-│   │   ├── es/
-│   │   │   ├── stw_academic.txt   
-│   │   │   ├── stw_generic.txt
-│   │   │   └── stw_science.txt
-├── src/
-│   ├── acronyms.py
-│   ├── embeddings_manager.py
-│   ├── pipe.py
-│   └── utils.py
-├── .devcontainer/
-│   ├── devcontainer.json
-├── nlpipe.py
-├── README.md
-├── requirements.txt
-├── LICENSE
-└── Dockerfile
-```
 
 ## License
 

@@ -1,0 +1,30 @@
+[project]
+name = "NLPipe"
+version = "0.3.0"
+description = ""
+authors = [{ name = "Lorena Calvo-Bartolomé" }]
+dependencies = [
+    "contractions==0.1.73",
+    "dask==2025.7.0",
+    "gensim==4.3.3",
+    "langdetect==1.0.9",
+    "numpy",
+    "pandas==2.3.2",
+    "sentence-transformers==5.1.0",
+    "spacy-download==1.1.0",
+    "tqdm==4.67.1",
+]
+requires-python = "==3.12.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[build-system]
+requires = ["hatchling >= 1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.uv]
+package = false

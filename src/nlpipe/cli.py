@@ -5,16 +5,16 @@ import pathlib
 import sys
 import time
 
-import dask.dataframe as dd
+import dask.dataframe as dd  # type: ignore
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
-from pyfiglet import figlet_format
-from termcolor import cprint
+from nlpipe.embeddings_manager import EmbeddingsManager
+from nlpipe.pipe import Pipe
+from nlpipe.utils import det, max_column_length, save_parquet
+from pyfiglet import figlet_format  # type: ignore
+from termcolor import cprint  # type: ignore
 
-from src.embeddings_manager import EmbeddingsManager
-from src.pipe import Pipe
-from src.utils import det, max_column_length, save_parquet
 
 # ########################
 # Main body of application
@@ -32,7 +32,7 @@ def main():
                         required=True, help="Name of the dataset to be preprocessed (e.g., cordis, scholar, etc.)")
     parser.add_argument("--destination_path", type=str, default=None,
                         required=True, help="Path to save the preprocessed data")
-    parser.add_argument("--stw_path", type=str, default="data/stw_lists",
+    parser.add_argument("--stw_path", type=str, default="src/nlpipe/stw_lists",
                         required=False, help="Folder path for stopwords")
     parser.add_argument("--lang", type=str, default="en",
                         required=False, help="Language of the text to be preprocessed (en/es)")

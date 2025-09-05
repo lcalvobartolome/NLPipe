@@ -95,3 +95,5 @@ es_acronyms_list = [(r'\bADN\b', 'ácido desoxirribonucleico'),
                     (r'\bETSIT\b', 'Escuela Técnica Superior de Ingenieros de Telecomunicación'),
                     (r'\bGREM\b', 'Gestión de Recursos Humanos y Emprendimiento')
                     ]
+
+de_acronyms_list = []

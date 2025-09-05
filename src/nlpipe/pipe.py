@@ -3,14 +3,13 @@ import pathlib
 import re
 from typing import List, Union
 
-import contractions
-import dask.dataframe as dd
+import contractions  # type: ignore
+import dask.dataframe as dd  # type: ignore
+import nlpipe.acronyms as acronyms
 import pandas as pd
-from dask.diagnostics import ProgressBar
+from dask.diagnostics import ProgressBar  # type: ignore
 from gensim.models.phrases import Phrases
-from spacy_download import load_spacy
-
-import src.acronyms as acronyms
+from spacy_download import load_spacy  # type: ignore
 
 
 class Pipe():
