@@ -7,4 +7,5 @@ pandas==2.3.2
 sentence_transformers==5.1.0
 spacy_download==1.1.0
 tqdm==4.67.1
-pyfiglet
+pyfiglet==1.0.4
+termcolor==2.3.0
